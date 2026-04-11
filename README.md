@@ -126,13 +126,149 @@ docker compose build web jobs
 **Erro de permissão em arquivos gerados pelo container**
 O container roda como `root` por padrão, então arquivos criados por ele (ex.: `bin/rails generate`) podem ficar com dono `root` no host. No macOS isso geralmente não incomoda; no Linux, ajuste com `sudo chown -R $USER:$USER .`.
 
+## Arquitetura
+
+O projeto segue **Domain-Driven Design** (DDD) dentro de um monolito Rails, com **separação explícita de camadas** estilo arquitetura hexagonal. A motivação é deixar o domínio isolado de detalhes de framework e infraestrutura — quem lê `app/domains/` deve ver código Ruby puro, sem nenhum vestígio de Rails.
+
+### Bounded Contexts
+
+Foram identificados três contextos delimitados (do Event Storming):
+
+| Contexto | Responsabilidade | Agregado principal |
+|---|---|---|
+| **Ordens de Serviço** | Ciclo de vida da OS (criação, diagnóstico, execução, finalização) | `OrdemDeServico` |
+| **Orçamentos** | Criação, envio, aprovação e reprovação de orçamentos | `Orcamento` |
+| **Estoque** | Reserva, baixa e cancelamento de peças | `ItemDeEstoque` |
+
+Os contextos **não se conhecem diretamente**: eles se comunicam por **eventos de domínio** publicados num barramento interno. As políticas (listeners) que reagem a esses eventos vivem em `app/application/politicas/` — é o único lugar do código que "sabe sobre dois contextos ao mesmo tempo".
+
+### Camadas
+
+```
+app/
+├── domains/                     # CAMADA DE DOMÍNIO — Ruby puro, sem Rails
+│   ├── ordens_de_servico/
+│   │   ├── ordem_de_servico.rb              # Agregado / entidade raiz
+│   │   ├── repositorio_de_ordens_de_servico.rb  # Interface (módulo)
+│   │   ├── value_objects/                   # VOs imutáveis (StatusDaOrdem, etc)
+│   │   └── eventos/                         # Eventos de domínio (OsCriada, OsDiagnosticada…)
+│   ├── orcamentos/              # mesma estrutura
+│   ├── estoque/                 # mesma estrutura
+│   └── shared/                  # Base classes e VOs cross-context (ValorMonetario…)
+│
+├── application/                 # CAMADA DE APLICAÇÃO — casos de uso
+│   ├── ordens_de_servico/       # 1 arquivo = 1 caso de uso (ex: CriarOrdemDeServico)
+│   ├── orcamentos/
+│   ├── estoque/
+│   ├── politicas/               # Listeners cross-context (sagas/process managers)
+│   └── shared/                  # Base classes (CasoDeUso, Resultado)
+│
+├── infrastructure/              # CAMADA DE INFRAESTRUTURA — adapters
+│   ├── persistence/             # ActiveRecord mora aqui, confinado
+│   │   ├── ordens_de_servico/   # *_record.rb (AR) + repositório concreto
+│   │   ├── orcamentos/
+│   │   └── estoque/
+│   ├── barramento_de_eventos/   # Publisher/subscriber interno
+│   ├── read_models/             # Projeções de leitura (ex: lista de OS aprovadas)
+│   └── integrations/            # Gateways para serviços externos (WhatsApp, etc)
+│
+├── controllers/                 # CAMADA DE INTERFACES — HTTP (convenção Rails)
+│   └── api/v1/                  # Controllers finos: só parseiam input e chamam casos de uso
+│
+├── jobs/                        # CAMADA DE INTERFACES — async (convenção Rails)
+│                                # Jobs também são só "entradas" que chamam casos de uso
+│
+└── models/                      # Apenas o ApplicationRecord base (convenção Rails)
+                                 # Modelos de persistência vivem em infrastructure/persistence/
+```
+
+> **Por que `controllers/` e `jobs/` não estão dentro de `interfaces/`?** Conceitualmente eles *são* a camada de interfaces (HTTP e async, respectivamente). Mantemos nos caminhos convencionais do Rails apenas para não brigar com Zeitwerk, roteamento e generators. No código, trate-os como parte da camada de interfaces.
+
+### Regra de dependência
+
+As camadas de fora podem depender das camadas de dentro, **nunca o contrário**:
+
+```
+controllers/jobs  →  application  →  domains
+                         ↓
+                   infrastructure  →  domains
+```
+
+- `domains/` não importa nada do Rails, nem de `application/`, `infrastructure/`, `controllers/`.
+- `application/` pode usar `domains/`, mas depende de repositórios via **interface** (definida em `domains/`), não da implementação AR.
+- `infrastructure/persistence/` implementa as interfaces de repositório definidas em `domains/`.
+- `controllers/` e `jobs/` orquestram: recebem input, chamam um caso de uso em `application/`, devolvem resposta. Nada de lógica de negócio.
+
+### Convenções de nomenclatura
+
+- **Domínio em português**: `OrdemDeServico`, `Orcamento`, `ItemDeEstoque`, `criar_ordem_de_servico`, etc. A *ubiquitous language* casa com os stakeholders.
+- **Entidades de domínio** têm o nome limpo: `OrdemDeServico`.
+- **Registros ActiveRecord** têm o sufixo `Record`: `OrdemDeServicoRecord`. Vivem em `infrastructure/persistence/`.
+- **Repositórios** têm o prefixo `RepositorioDe...` (interface) e `RepositorioArDe...` (implementação AR).
+- **Casos de uso** são verbos no infinitivo: `CriarOrdemDeServico`, `AprovarOrcamento`, `ReservarPeca`.
+- **Eventos de domínio** são substantivos no particípio: `OsCriada`, `OrcamentoAprovado`, `PecaReservada`.
+- **Políticas** começam com `Quando...`: `QuandoOsDiagnosticadaCriaOrcamento`.
+
+### Fluxo de exemplo (end-to-end)
+
+Quando um atendente cria uma OS via API:
+
+1. **HTTP** → `Api::V1::OrdensDeServicoController#create` recebe o request.
+2. **Controller** instancia o caso de uso `OrdensDeServico::CriarOrdemDeServico` com suas dependências (repositório, barramento).
+3. **Caso de uso** cria a entidade `OrdemDeServico` (domínio), persiste via repositório, publica o evento `OsCriada`.
+4. **Repositório** converte a entidade para `OrdemDeServicoRecord` (AR) e grava no banco.
+5. **Barramento** entrega `OsCriada` para qualquer listener inscrito (nenhum, por enquanto).
+6. **Controller** devolve `201 Created` com o serializer.
+
+Mais tarde, quando o mecânico diagnostica a OS:
+
+1. `DiagnosticarOrdemDeServico` publica `OsDiagnosticada`.
+2. A política `QuandoOsDiagnosticadaCriaOrcamento` (em `application/politicas/`) captura o evento.
+3. A política chama `Orcamentos::CriarOrcamento` — cruzando para o contexto **Orçamentos**.
+4. `Orcamentos::CriarOrcamento` cria o agregado `Orcamento` e publica `OrcamentoCriado`.
+
+Nenhum desses passos acopla domínios diferentes. O único ponto de contato é o evento, que é *parte do domínio* (não da infraestrutura).
+
+## Testes
+
+Usamos **RSpec** com `factory_bot_rails`, `faker` e `shoulda-matchers`. A estrutura de `spec/` espelha `app/`:
+
+```
+spec/
+├── domains/              # Testes unitários de entidades e VOs — sem Rails, extremamente rápidos
+├── application/          # Testes de casos de uso com doubles para repositórios
+│   └── politicas/        # Testes de integração de listeners cross-context
+├── infrastructure/
+│   └── persistence/      # Testes de integração dos repositórios (batem no Postgres)
+├── requests/             # Request specs para a API
+│   └── api/v1/
+├── factories/            # FactoryBot factories
+└── support/              # Helpers compartilhados
+```
+
+**Rodando os testes:**
+```bash
+docker compose exec web bundle exec rspec
+docker compose exec web bundle exec rspec spec/domains        # só unit tests do domínio
+docker compose exec web bundle exec rspec spec/requests       # só request specs
+```
+
+## Linting
+
+Usamos **RuboCop** com `rubocop-rails-omakase` como base e `rubocop-rspec` para cops específicos de testes. Regras customizadas estão em `.rubocop.yml`.
+
+```bash
+docker compose exec web bundle exec rubocop                   # roda em tudo
+docker compose exec web bundle exec rubocop -A                # auto-fix do que é seguro
+docker compose exec web bundle exec rubocop app/domains       # só um diretório
+```
+
 ## Estrutura do projeto
 
-Esqueleto padrão do Rails 8 API-only. As pastas relevantes para o dia-a-dia:
-
-- `app/` — models, controllers, jobs, mailers
+- `app/` — código da aplicação (ver seção **Arquitetura** acima)
 - `config/` — configurações (rotas, ambientes, database, queue)
 - `db/` — migrations e schemas
+- `spec/` — testes (RSpec)
 - `Dockerfile.dev` — imagem usada em desenvolvimento
 - `compose.yml` — orquestração dos serviços
 
