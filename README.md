@@ -148,30 +148,30 @@ O projeto tem dois tipos de contexto: **core** (o que dá valor ao negócio, def
 |---|---|---|
 | **Cadastros** | Gerenciar clientes (PF/PJ) e seus veículos — dados-mestre consumidos pelos contextos core | `Cliente`, `Veiculo` |
 
-Os contextos **não se conhecem diretamente**: eles se comunicam por **eventos de domínio** publicados num barramento interno. As políticas (listeners) que reagem a esses eventos vivem em `app/application/politicas/` — é o único lugar do código que "sabe sobre dois contextos ao mesmo tempo".
+Os contextos **não se conhecem no nível de domínio**. A comunicação cross-context é feita por **chamada direta entre Application Services (use cases) com injeção de dependência**, conforme descrito por Eric Evans (Domain-Driven Design, cap. 4): a Application Layer "coordena tarefas e delega trabalho para objetos de domínio". Exemplo: ao aprovar um orçamento, o use case `AprovarOrcamento` chama diretamente `AprovarOrdemDeServico` e `BaixarQuantidade` — ambos injetados no construtor.
 
 **Context map** (quem depende de quem):
 
 ```
           ┌───────────────┐
-          │   CADASTROS   │  ◄──────── OsFinalizada (atualiza km do veículo)
+          │   CADASTROS   │  ◄──── FinalizarOS chama AtualizarQuilometragem
           │  (supporting) │
           └───────┬───────┘
                   │
-   Dados de Cliente e Veículo
-   via Read Model / query
+   Dados de Cliente, Veículo e Serviço
+   via repositórios injetados
                   │
      ┌────────────┼────────────┐
      ▼            ▼            ▼
 ┌─────────┐  ┌─────────┐  ┌─────────┐
 │ ORDENS  │  │ ORÇA-   │  │ ESTOQUE │
-│   DE    │  │ MENTOS  │  │         │
+│   DE    │──│ MENTOS  │──│(support)│
 │ SERVIÇO │  │         │  │         │
 └─────────┘  └─────────┘  └─────────┘
-    core        core         core
+    core        core
 ```
 
-Cadastros é um **supplier** no padrão Customer/Supplier: os contextos core consomem dados de Cliente/Veículo dele. Estoque não depende de Cadastros. O único caminho de volta é o evento `OsFinalizada`, que dispara a atualização da quilometragem do veículo.
+Cadastros é um **supplier** no padrão Customer/Supplier: os contextos core consomem dados de Cliente/Veículo/Serviço dele via repositórios injetados.
 
 ### Camadas
 
@@ -181,8 +181,7 @@ app/
 │   ├── ordens_de_servico/
 │   │   ├── ordem_de_servico.rb              # Agregado / entidade raiz
 │   │   ├── repositorio_de_ordens_de_servico.rb  # Interface (módulo)
-│   │   ├── value_objects/                   # VOs imutáveis (StatusDaOrdem, etc)
-│   │   └── eventos/                         # Eventos de domínio (OsCriada, OsDiagnosticada…)
+│   │   └── value_objects/                   # VOs imutáveis (StatusDaOrdem, etc)
 │   ├── orcamentos/              # mesma estrutura
 │   ├── estoque/                 # mesma estrutura
 │   ├── cadastros/               # Cliente e Veículo (supporting subdomain)
@@ -193,7 +192,6 @@ app/
 │   ├── orcamentos/
 │   ├── estoque/
 │   ├── cadastros/
-│   ├── politicas/               # Listeners cross-context (sagas/process managers)
 │   └── shared/                  # Base classes (CasoDeUso, Resultado)
 │
 ├── infrastructure/              # CAMADA DE INFRAESTRUTURA — adapters
@@ -202,7 +200,6 @@ app/
 │   │   ├── orcamentos/
 │   │   ├── estoque/
 │   │   └── cadastros/
-│   ├── barramento_de_eventos/   # Publisher/subscriber interno
 │   ├── read_models/             # Projeções de leitura (ex: lista de OS aprovadas)
 │   └── integrations/            # Gateways para serviços externos (WhatsApp, etc)
 │
@@ -240,28 +237,24 @@ controllers/jobs  →  application  →  domains
 - **Registros ActiveRecord** têm o sufixo `Record`: `OrdemDeServicoRecord`. Vivem em `infrastructure/persistence/`.
 - **Repositórios** têm o prefixo `RepositorioDe...` (interface) e `RepositorioArDe...` (implementação AR).
 - **Casos de uso** são verbos no infinitivo: `CriarOrdemDeServico`, `AprovarOrcamento`, `ReservarPeca`.
-- **Eventos de domínio** são substantivos no particípio: `OsCriada`, `OrcamentoAprovado`, `PecaReservada`.
-- **Políticas** começam com `Quando...`: `QuandoOsDiagnosticadaCriaOrcamento`.
-
 ### Fluxo de exemplo (end-to-end)
 
 Quando um atendente cria uma OS via API:
 
 1. **HTTP** → `Api::V1::OrdensDeServicoController#create` recebe o request.
-2. **Controller** instancia o caso de uso `OrdensDeServico::CriarOrdemDeServico` com suas dependências (repositório, barramento).
-3. **Caso de uso** cria a entidade `OrdemDeServico` (domínio), persiste via repositório, publica o evento `OsCriada`.
+2. **Controller** instancia o caso de uso `CriarOrdemDeServico` com suas dependências (repositório de OS, repositório de clientes, repositório de veículos — todos injetados).
+3. **Caso de uso** valida que cliente e veículo existem, cria a entidade `OrdemDeServico` (domínio), persiste via repositório.
 4. **Repositório** converte a entidade para `OrdemDeServicoRecord` (AR) e grava no banco.
-5. **Barramento** entrega `OsCriada` para qualquer listener inscrito (nenhum, por enquanto).
-6. **Controller** devolve `201 Created` com o serializer.
+5. **Controller** devolve `201 Created` com o serializer.
 
 Mais tarde, quando o mecânico diagnostica a OS:
 
-1. `DiagnosticarOrdemDeServico` publica `OsDiagnosticada`.
-2. A política `QuandoOsDiagnosticadaCriaOrcamento` (em `application/politicas/`) captura o evento.
-3. A política chama `Orcamentos::CriarOrcamento` — cruzando para o contexto **Orçamentos**.
-4. `Orcamentos::CriarOrcamento` cria o agregado `Orcamento` e publica `OrcamentoCriado`.
+1. **Controller** chama `DiagnosticarOrdemDeServico` (que recebeu `CriarOrcamento` como dependência injetada).
+2. **Use case** muda status da OS para "AguardandoAprovacao" e persiste.
+3. **Use case** chama `CriarOrcamento` diretamente — cruzando para o contexto **Orçamentos** na camada de aplicação.
+4. `CriarOrcamento` copia os itens da OS com snapshot de preço e cria o agregado `Orcamento`.
 
-Nenhum desses passos acopla domínios diferentes. O único ponto de contato é o evento, que é *parte do domínio* (não da infraestrutura).
+O domínio permanece puro: `OrdemDeServico#diagnosticar` não sabe que orçamento existe. A orquestração cross-context vive exclusivamente na Application Layer (Evans, cap. 4).
 
 ## Testes
 
@@ -271,7 +264,6 @@ Usamos **RSpec** com `factory_bot_rails`, `faker` e `shoulda-matchers`. A estrut
 spec/
 ├── domains/              # Testes unitários de entidades e VOs — sem Rails, extremamente rápidos
 ├── application/          # Testes de casos de uso com doubles para repositórios
-│   └── politicas/        # Testes de integração de listeners cross-context
 ├── infrastructure/
 │   └── persistence/      # Testes de integração dos repositórios (batem no Postgres)
 ├── requests/             # Request specs para a API
