@@ -132,7 +132,9 @@ O projeto segue **Domain-Driven Design** (DDD) dentro de um monolito Rails, com 
 
 ### Bounded Contexts
 
-Foram identificados três contextos delimitados (do Event Storming):
+O projeto tem dois tipos de contexto: **core** (o que dá valor ao negócio, definido no Event Storming) e **supporting** (subdomínios de apoio que viabilizam o core).
+
+**Contextos core:**
 
 | Contexto | Responsabilidade | Agregado principal |
 |---|---|---|
@@ -140,7 +142,36 @@ Foram identificados três contextos delimitados (do Event Storming):
 | **Orçamentos** | Criação, envio, aprovação e reprovação de orçamentos | `Orcamento` |
 | **Estoque** | Reserva, baixa e cancelamento de peças | `ItemDeEstoque` |
 
+**Contextos de suporte:**
+
+| Contexto | Responsabilidade | Agregados |
+|---|---|---|
+| **Cadastros** | Gerenciar clientes (PF/PJ) e seus veículos — dados-mestre consumidos pelos contextos core | `Cliente`, `Veiculo` |
+
 Os contextos **não se conhecem diretamente**: eles se comunicam por **eventos de domínio** publicados num barramento interno. As políticas (listeners) que reagem a esses eventos vivem em `app/application/politicas/` — é o único lugar do código que "sabe sobre dois contextos ao mesmo tempo".
+
+**Context map** (quem depende de quem):
+
+```
+          ┌───────────────┐
+          │   CADASTROS   │  ◄──────── OsFinalizada (atualiza km do veículo)
+          │  (supporting) │
+          └───────┬───────┘
+                  │
+   Dados de Cliente e Veículo
+   via Read Model / query
+                  │
+     ┌────────────┼────────────┐
+     ▼            ▼            ▼
+┌─────────┐  ┌─────────┐  ┌─────────┐
+│ ORDENS  │  │ ORÇA-   │  │ ESTOQUE │
+│   DE    │  │ MENTOS  │  │         │
+│ SERVIÇO │  │         │  │         │
+└─────────┘  └─────────┘  └─────────┘
+    core        core         core
+```
+
+Cadastros é um **supplier** no padrão Customer/Supplier: os contextos core consomem dados de Cliente/Veículo dele. Estoque não depende de Cadastros. O único caminho de volta é o evento `OsFinalizada`, que dispara a atualização da quilometragem do veículo.
 
 ### Camadas
 
@@ -154,12 +185,14 @@ app/
 │   │   └── eventos/                         # Eventos de domínio (OsCriada, OsDiagnosticada…)
 │   ├── orcamentos/              # mesma estrutura
 │   ├── estoque/                 # mesma estrutura
+│   ├── cadastros/               # Cliente e Veículo (supporting subdomain)
 │   └── shared/                  # Base classes e VOs cross-context (ValorMonetario…)
 │
 ├── application/                 # CAMADA DE APLICAÇÃO — casos de uso
 │   ├── ordens_de_servico/       # 1 arquivo = 1 caso de uso (ex: CriarOrdemDeServico)
 │   ├── orcamentos/
 │   ├── estoque/
+│   ├── cadastros/
 │   ├── politicas/               # Listeners cross-context (sagas/process managers)
 │   └── shared/                  # Base classes (CasoDeUso, Resultado)
 │
@@ -167,7 +200,8 @@ app/
 │   ├── persistence/             # ActiveRecord mora aqui, confinado
 │   │   ├── ordens_de_servico/   # *_record.rb (AR) + repositório concreto
 │   │   ├── orcamentos/
-│   │   └── estoque/
+│   │   ├── estoque/
+│   │   └── cadastros/
 │   ├── barramento_de_eventos/   # Publisher/subscriber interno
 │   ├── read_models/             # Projeções de leitura (ex: lista de OS aprovadas)
 │   └── integrations/            # Gateways para serviços externos (WhatsApp, etc)
