@@ -10,11 +10,11 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_04_12_234818) do
+ActiveRecord::Schema[8.1].define(version: 2026_04_14_001921) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
-  create_table "customers", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+  create_table "customers", force: :cascade do |t|
     t.string "city", null: false
     t.string "complement"
     t.datetime "created_at", null: false
@@ -32,4 +32,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_12_234818) do
     t.index ["document"], name: "index_customers_on_document", unique: true
     t.index ["status"], name: "index_customers_on_status"
   end
+
+  create_table "vehicles", force: :cascade do |t|
+    t.string "color"
+    t.datetime "created_at", null: false
+    t.bigint "customer_id", null: false
+    t.string "license_plate", null: false
+    t.string "make", null: false
+    t.integer "mileage", default: 0, null: false
+    t.string "model", null: false
+    t.integer "status", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.integer "year", null: false
+    t.index ["customer_id"], name: "index_vehicles_on_customer_id"
+    t.index ["license_plate"], name: "index_vehicles_on_license_plate", unique: true
+    t.index ["status"], name: "index_vehicles_on_status"
+  end
+
+  add_foreign_key "vehicles", "customers"
 end

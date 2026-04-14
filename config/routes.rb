@@ -8,6 +8,12 @@ Rails.application.routes.draw do
   namespace :api do
     namespace :v1 do
       resources :customers, only: %i[index show create update destroy]
+
+      resources :vehicles, only: %i[index show create update] do
+        member do
+          patch :update_mileage
+        end
+      end
     end
   end
 end
