@@ -60,6 +60,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_19_183025) do
     t.index ["work_order_id"], name: "index_line_items_on_work_order_id"
   end
 
+  create_table "services", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.integer "base_price_cents", null: false
+    t.datetime "created_at", null: false
+    t.text "description"
+    t.integer "estimated_duration_minutes", default: 0, null: false
+    t.string "name", null: false
+    t.datetime "updated_at", null: false
+    t.index ["name"], name: "index_services_on_name", unique: true
+  end
+
   create_table "vehicles", force: :cascade do |t|
     t.string "color"
     t.datetime "created_at", null: false
