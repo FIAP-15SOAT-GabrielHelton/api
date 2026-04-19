@@ -31,6 +31,12 @@ Rails.application.routes.draw do
           post :line_items, action: :add_line_item
         end
       end
+
+      resources :quotes, only: %i[show] do
+        member do
+          patch :send_to_customer
+        end
+      end
     end
   end
 end

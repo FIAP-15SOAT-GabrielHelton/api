@@ -89,7 +89,14 @@ module Api
       end
 
       def diagnose_work_order
-        WorkOrders::DiagnoseWorkOrder.new(work_order_repository: work_order_repository)
+        WorkOrders::DiagnoseWorkOrder.new(
+          work_order_repository: work_order_repository,
+          create_quote: Quotes::CreateQuote.new(quote_repository: quote_repository)
+        )
+      end
+
+      def quote_repository
+        @quote_repository ||= Persistence::Quotes::ActiveRecordQuoteRepository.new
       end
 
       def add_line_item_use_case
