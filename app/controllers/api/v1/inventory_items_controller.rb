@@ -49,6 +49,26 @@ module Api
         end
       end
 
+      def add_quantity
+        result = add_quantity_use_case.call(id: params[:id], amount: movement_amount)
+
+        if result.success?
+          render json: serialize(result.value)
+        else
+          render json: { error: result.error }, status: :unprocessable_entity
+        end
+      end
+
+      def decrease_quantity
+        result = decrease_quantity_use_case.call(id: params[:id], amount: movement_amount)
+
+        if result.success?
+          render json: serialize(result.value)
+        else
+          render json: { error: result.error }, status: :unprocessable_entity
+        end
+      end
+
       private
 
       def repository
@@ -73,6 +93,20 @@ module Api
 
       def deactivate_inventory_item
         Inventory::DeactivateInventoryItem.new(inventory_item_repository: repository)
+      end
+
+      def add_quantity_use_case
+        Inventory::AddQuantity.new(inventory_item_repository: repository)
+      end
+
+      def decrease_quantity_use_case
+        Inventory::DecreaseQuantity.new(inventory_item_repository: repository)
+      end
+
+      def movement_amount
+        Integer(params[:amount])
+      rescue ArgumentError, TypeError
+        params[:amount]
       end
 
       def create_params

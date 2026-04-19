@@ -179,6 +179,70 @@ describe Inventory::InventoryItem do
     end
   end
 
+  describe "#add_quantity" do
+    it "increments the current quantity" do
+      item = described_class.new(**valid_attrs.merge(quantity: 10))
+
+      item.add_quantity(5)
+
+      expect(item.quantity.to_i).to eq(15)
+    end
+
+    it "rejects zero" do
+      item = described_class.new(**valid_attrs)
+
+      expect { item.add_quantity(0) }.to raise_error(ArgumentError, /positive integer/)
+    end
+
+    it "rejects negative amounts" do
+      item = described_class.new(**valid_attrs)
+
+      expect { item.add_quantity(-1) }.to raise_error(ArgumentError, /positive integer/)
+    end
+
+    it "rejects non-integer amounts" do
+      item = described_class.new(**valid_attrs)
+
+      expect { item.add_quantity("5") }.to raise_error(ArgumentError, /positive integer/)
+    end
+  end
+
+  describe "#decrease_quantity" do
+    it "decrements the current quantity" do
+      item = described_class.new(**valid_attrs.merge(quantity: 10))
+
+      item.decrease_quantity(3)
+
+      expect(item.quantity.to_i).to eq(7)
+    end
+
+    it "allows decreasing to exactly zero" do
+      item = described_class.new(**valid_attrs.merge(quantity: 5))
+
+      item.decrease_quantity(5)
+
+      expect(item.quantity.to_i).to eq(0)
+    end
+
+    it "rejects zero" do
+      item = described_class.new(**valid_attrs.merge(quantity: 10))
+
+      expect { item.decrease_quantity(0) }.to raise_error(ArgumentError, /positive integer/)
+    end
+
+    it "rejects negative amounts" do
+      item = described_class.new(**valid_attrs.merge(quantity: 10))
+
+      expect { item.decrease_quantity(-1) }.to raise_error(ArgumentError, /positive integer/)
+    end
+
+    it "raises when decreasing below zero" do
+      item = described_class.new(**valid_attrs.merge(quantity: 3))
+
+      expect { item.decrease_quantity(5) }.to raise_error(/Insufficient stock/)
+    end
+  end
+
   describe "identity equality (from Entity)" do
     it "is equal when IDs are equal" do
       item1 = described_class.new(**valid_attrs)

@@ -44,6 +44,18 @@ module Inventory
       @minimum_quantity = ensure_quantity(minimum_quantity) if minimum_quantity
     end
 
+    def add_quantity(amount)
+      validate_movement_amount!(amount)
+      @quantity = ValueObjects::Quantity.new(@quantity.to_i + amount)
+    end
+
+    def decrease_quantity(amount)
+      validate_movement_amount!(amount)
+      raise "Insufficient stock: current #{@quantity}, attempted decrease of #{amount}" if amount > @quantity.to_i
+
+      @quantity = ValueObjects::Quantity.new(@quantity.to_i - amount)
+    end
+
     private
 
     def ensure_unit_price(price)
@@ -52,6 +64,10 @@ module Inventory
 
     def ensure_quantity(qty)
       qty.is_a?(ValueObjects::Quantity) ? qty : ValueObjects::Quantity.new(qty)
+    end
+
+    def validate_movement_amount!(amount)
+      raise ArgumentError, "Quantity movement must be a positive integer" unless amount.is_a?(Integer) && amount.positive?
     end
   end
 end
