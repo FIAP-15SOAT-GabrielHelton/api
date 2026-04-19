@@ -46,6 +46,8 @@ Rails.application.routes.draw do
           patch :reject
         end
       end
+
+      get "tracking/:protocol", to: "tracking#show", as: :tracking
     end
   end
 end

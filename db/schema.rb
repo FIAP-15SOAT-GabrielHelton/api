@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_04_19_211745) do
+ActiveRecord::Schema[8.1].define(version: 2026_04_19_222454) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -111,10 +111,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_19_211745) do
     t.bigint "customer_id", null: false
     t.bigint "mechanic_id"
     t.text "problem_description", null: false
+    t.string "protocol", null: false
     t.string "status", default: "received", null: false
     t.datetime "updated_at", null: false
     t.bigint "vehicle_id", null: false
     t.index ["customer_id"], name: "index_work_orders_on_customer_id"
+    t.index ["protocol"], name: "index_work_orders_on_protocol", unique: true
     t.index ["status"], name: "index_work_orders_on_status"
     t.index ["vehicle_id"], name: "index_work_orders_on_vehicle_id"
   end
