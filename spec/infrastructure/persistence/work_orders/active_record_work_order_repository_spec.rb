@@ -117,4 +117,26 @@ RSpec.describe Persistence::WorkOrders::ActiveRecordWorkOrderRepository do
       expect(Persistence::WorkOrders::LineItemRecord.where(work_order_id: saved.id)).to be_empty
     end
   end
+
+  describe "#find_by_protocol" do
+    it "finds a work order by its protocol" do
+      saved = repository.save(build_work_order)
+
+      found = repository.find_by_protocol(saved.protocol)
+
+      expect(found).to be_a(WorkOrders::WorkOrder)
+      expect(found.id).to eq(saved.id)
+    end
+
+    it "returns nil when protocol does not match" do
+      expect(repository.find_by_protocol("NOPE")).to be_nil
+    end
+
+    it "persists the entity-generated protocol on save" do
+      saved = repository.save(build_work_order)
+
+      expect(saved.protocol).to match(/\A[A-Z0-9]{8}\z/)
+      expect(Persistence::WorkOrders::WorkOrderRecord.find(saved.id).protocol).to eq(saved.protocol)
+    end
+  end
 end

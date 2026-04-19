@@ -14,6 +14,7 @@ module Persistence
       validates :customer_id, presence: true
       validates :vehicle_id, presence: true
       validates :problem_description, presence: true
+      validates :protocol, presence: true, uniqueness: true
       validates :status, presence: true,
                          inclusion: { in: ::WorkOrders::ValueObjects::WorkOrderStatus::STATES.map(&:to_s) }
     end

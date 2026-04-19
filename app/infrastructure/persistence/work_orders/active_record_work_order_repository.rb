@@ -31,6 +31,13 @@ module Persistence
           .map { |record| to_entity(record) }
       end
 
+      def find_by_protocol(protocol)
+        record = WorkOrderRecord.includes(:line_item_records).find_by(protocol: protocol)
+        return nil unless record
+
+        to_entity(record)
+      end
+
       def delete(id)
         WorkOrderRecord.find_by(id: id)&.destroy
       end
@@ -66,6 +73,7 @@ module Persistence
           status: record.status.to_sym,
           mechanic_id: record.mechanic_id,
           line_items: record.line_item_records.map { |line_record| line_item_to_entity(line_record) },
+          protocol: record.protocol,
           created_at: record.created_at,
           updated_at: record.updated_at
         )
@@ -88,7 +96,8 @@ module Persistence
           vehicle_id: work_order.vehicle_id,
           problem_description: work_order.problem_description,
           status: work_order.status.to_s,
-          mechanic_id: work_order.mechanic_id
+          mechanic_id: work_order.mechanic_id,
+          protocol: work_order.protocol
         }
       end
 

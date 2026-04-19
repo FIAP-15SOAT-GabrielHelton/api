@@ -55,6 +55,24 @@ describe WorkOrders::WorkOrder do
 
       expect(wo.diagnosing?).to be true
     end
+
+    it "generates a protocol when none is provided" do
+      wo = described_class.new(**valid_attrs)
+
+      expect(wo.protocol).to match(/\A[A-Z0-9]{8}\z/)
+    end
+
+    it "preserves a provided protocol" do
+      wo = described_class.new(**valid_attrs.merge(protocol: "CUSTOM01"))
+
+      expect(wo.protocol).to eq("CUSTOM01")
+    end
+
+    it "generates distinct protocols for different instances" do
+      protocols = 10.times.map { described_class.new(**valid_attrs).protocol }
+
+      expect(protocols.uniq.size).to eq(protocols.size)
+    end
   end
 
   describe "state predicates" do
