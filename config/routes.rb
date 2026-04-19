@@ -15,6 +15,8 @@ Rails.application.routes.draw do
         end
       end
 
+      resources :inventory_items, only: %i[index show create update destroy]
+
       resources :work_orders, only: %i[show create]
     end
   end
