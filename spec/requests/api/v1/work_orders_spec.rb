@@ -117,4 +117,145 @@ RSpec.describe "Api::V1::WorkOrders", type: :request do
       expect(response).to have_http_status(:not_found)
     end
   end
+
+  def create_service(**overrides)
+    base = { name: "Oil Change", description: "Full oil change", base_price: 5000, estimated_duration_minutes: 30 }
+    post "/api/v1/services", params: base.merge(overrides), as: :json
+    response.parsed_body["id"]
+  end
+
+  def create_inventory_item(**overrides)
+    base = { name: "Brake Pad", code: "BP-001", unit_price: 2000, quantity: 5 }
+    post "/api/v1/inventory_items", params: base.merge(overrides), as: :json
+    response.parsed_body["id"]
+  end
+
+  def create_work_order(customer_id, vehicle_id)
+    post "/api/v1/work_orders",
+         params: { customer_id: customer_id, vehicle_id: vehicle_id, problem_description: "x" },
+         as: :json
+    response.parsed_body["id"]
+  end
+
+  describe "PATCH /api/v1/work_orders/:id/assign" do
+    it "assigns mechanic and moves to diagnosing" do
+      customer_id = create_customer
+      vehicle_id = create_vehicle(customer_id)
+      wo_id = create_work_order(customer_id, vehicle_id)
+
+      patch "/api/v1/work_orders/#{wo_id}/assign", params: { mechanic_id: 42 }, as: :json
+
+      expect(response).to have_http_status(:ok)
+      body = response.parsed_body
+      expect(body["status"]).to eq("diagnosing")
+      expect(body["mechanic_id"]).to eq(42)
+    end
+
+    it "returns 422 when mechanic_id is missing" do
+      customer_id = create_customer
+      vehicle_id = create_vehicle(customer_id)
+      wo_id = create_work_order(customer_id, vehicle_id)
+
+      patch "/api/v1/work_orders/#{wo_id}/assign", params: {}, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+  end
+
+  describe "POST /api/v1/work_orders/:id/line_items" do
+    it "adds a service line item with current price as snapshot" do
+      customer_id = create_customer
+      vehicle_id = create_vehicle(customer_id)
+      wo_id = create_work_order(customer_id, vehicle_id)
+      service_id = create_service
+      patch "/api/v1/work_orders/#{wo_id}/assign", params: { mechanic_id: 1 }, as: :json
+
+      post "/api/v1/work_orders/#{wo_id}/line_items",
+           params: { item_type: "service", reference_id: service_id, quantity: 1 },
+           as: :json
+
+      expect(response).to have_http_status(:created)
+      item = response.parsed_body["line_items"].last
+      expect(item["item_type"]).to eq("service")
+      expect(item["name_snapshot"]).to eq("Oil Change")
+      expect(item["price_snapshot"]).to eq("R$ 50.00")
+    end
+
+    it "adds a part line item from inventory" do
+      customer_id = create_customer
+      vehicle_id = create_vehicle(customer_id)
+      wo_id = create_work_order(customer_id, vehicle_id)
+      item_id = create_inventory_item
+      patch "/api/v1/work_orders/#{wo_id}/assign", params: { mechanic_id: 1 }, as: :json
+
+      post "/api/v1/work_orders/#{wo_id}/line_items",
+           params: { item_type: "part", reference_id: item_id, quantity: 2 },
+           as: :json
+
+      expect(response).to have_http_status(:created)
+      item = response.parsed_body["line_items"].last
+      expect(item["item_type"]).to eq("part")
+      expect(item["price_snapshot"]).to eq("R$ 20.00")
+    end
+
+    it "preserves price snapshot after catalog price change" do
+      customer_id = create_customer
+      vehicle_id = create_vehicle(customer_id)
+      wo_id = create_work_order(customer_id, vehicle_id)
+      service_id = create_service
+      patch "/api/v1/work_orders/#{wo_id}/assign", params: { mechanic_id: 1 }, as: :json
+
+      post "/api/v1/work_orders/#{wo_id}/line_items",
+           params: { item_type: "service", reference_id: service_id, quantity: 1 },
+           as: :json
+      patch "/api/v1/services/#{service_id}", params: { base_price: 9000 }, as: :json
+
+      get "/api/v1/work_orders/#{wo_id}", as: :json
+
+      item = response.parsed_body["line_items"].last
+      expect(item["price_snapshot"]).to eq("R$ 50.00")
+    end
+
+    it "returns 422 when work order is still in received" do
+      customer_id = create_customer
+      vehicle_id = create_vehicle(customer_id)
+      wo_id = create_work_order(customer_id, vehicle_id)
+      service_id = create_service
+
+      post "/api/v1/work_orders/#{wo_id}/line_items",
+           params: { item_type: "service", reference_id: service_id, quantity: 1 },
+           as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+  end
+
+  describe "PATCH /api/v1/work_orders/:id/diagnose" do
+    it "moves to awaiting_approval after items are added" do
+      customer_id = create_customer
+      vehicle_id = create_vehicle(customer_id)
+      wo_id = create_work_order(customer_id, vehicle_id)
+      service_id = create_service
+      patch "/api/v1/work_orders/#{wo_id}/assign", params: { mechanic_id: 1 }, as: :json
+      post "/api/v1/work_orders/#{wo_id}/line_items",
+           params: { item_type: "service", reference_id: service_id, quantity: 1 },
+           as: :json
+
+      patch "/api/v1/work_orders/#{wo_id}/diagnose", as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body["status"]).to eq("awaiting_approval")
+    end
+
+    it "returns 422 when there are no line items" do
+      customer_id = create_customer
+      vehicle_id = create_vehicle(customer_id)
+      wo_id = create_work_order(customer_id, vehicle_id)
+      patch "/api/v1/work_orders/#{wo_id}/assign", params: { mechanic_id: 1 }, as: :json
+
+      patch "/api/v1/work_orders/#{wo_id}/diagnose", as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+  end
 end
