@@ -58,6 +58,36 @@ module Api
         end
       end
 
+      def execute
+        result = execute_service.call(id: params[:id])
+
+        if result.success?
+          render json: serialize(result.value)
+        else
+          render json: { error: result.error }, status: :unprocessable_entity
+        end
+      end
+
+      def complete
+        result = complete_work_order.call(id: params[:id], current_mileage: current_mileage_param)
+
+        if result.success?
+          render json: serialize(result.value)
+        else
+          render json: { error: result.error }, status: :unprocessable_entity
+        end
+      end
+
+      def deliver
+        result = deliver_work_order.call(id: params[:id])
+
+        if result.success?
+          render json: serialize(result.value)
+        else
+          render json: { error: result.error }, status: :unprocessable_entity
+        end
+      end
+
       private
 
       def work_order_repository
@@ -105,6 +135,29 @@ module Api
           service_repository: Persistence::Registrations::ActiveRecordServiceRepository.new,
           inventory_item_repository: Persistence::Inventory::ActiveRecordInventoryItemRepository.new
         )
+      end
+
+      def execute_service
+        WorkOrders::ExecuteService.new(work_order_repository: work_order_repository)
+      end
+
+      def complete_work_order
+        WorkOrders::CompleteWorkOrder.new(
+          work_order_repository: work_order_repository,
+          update_mileage: Registrations::UpdateMileage.new(vehicle_repository: vehicle_repository)
+        )
+      end
+
+      def deliver_work_order
+        WorkOrders::DeliverWorkOrder.new(work_order_repository: work_order_repository)
+      end
+
+      def current_mileage_param
+        return nil if params[:current_mileage].nil?
+
+        Integer(params[:current_mileage])
+      rescue ArgumentError, TypeError
+        params[:current_mileage]
       end
 
       def create_params

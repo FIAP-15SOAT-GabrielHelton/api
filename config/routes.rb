@@ -29,6 +29,9 @@ Rails.application.routes.draw do
           patch :assign
           patch :diagnose
           post :line_items, action: :add_line_item
+          patch :execute
+          patch :complete
+          patch :deliver
         end
       end
 

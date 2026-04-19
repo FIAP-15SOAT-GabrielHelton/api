@@ -157,18 +157,66 @@ describe WorkOrders::WorkOrder do
   end
 
   describe "#approve" do
-    it "transitions awaiting_approval → in_progress" do
+    it "transitions awaiting_approval → approved" do
       wo = described_class.new(**valid_attrs.merge(status: :awaiting_approval))
 
       wo.approve
 
-      expect(wo.in_progress?).to be true
+      expect(wo.approved?).to be true
     end
 
     it "rejects approve from non-awaiting_approval status" do
       wo = described_class.new(**valid_attrs)
 
       expect { wo.approve }.to raise_error(/Invalid transition/)
+    end
+  end
+
+  describe "#execute" do
+    it "transitions approved → in_progress" do
+      wo = described_class.new(**valid_attrs.merge(status: :approved))
+
+      wo.execute
+
+      expect(wo.in_progress?).to be true
+    end
+
+    it "rejects execute from non-approved status" do
+      wo = described_class.new(**valid_attrs.merge(status: :awaiting_approval))
+
+      expect { wo.execute }.to raise_error(/Invalid transition/)
+    end
+  end
+
+  describe "#complete" do
+    it "transitions in_progress → completed" do
+      wo = described_class.new(**valid_attrs.merge(status: :in_progress))
+
+      wo.complete
+
+      expect(wo.completed?).to be true
+    end
+
+    it "rejects complete from non-in_progress status" do
+      wo = described_class.new(**valid_attrs.merge(status: :approved))
+
+      expect { wo.complete }.to raise_error(/Invalid transition/)
+    end
+  end
+
+  describe "#deliver" do
+    it "transitions completed → delivered" do
+      wo = described_class.new(**valid_attrs.merge(status: :completed))
+
+      wo.deliver
+
+      expect(wo.delivered?).to be true
+    end
+
+    it "rejects deliver from non-completed status" do
+      wo = described_class.new(**valid_attrs.merge(status: :in_progress))
+
+      expect { wo.deliver }.to raise_error(/Invalid transition/)
     end
   end
 

@@ -7,6 +7,7 @@ module WorkOrders
         received
         diagnosing
         awaiting_approval
+        approved
         in_progress
         completed
         delivered
@@ -16,7 +17,8 @@ module WorkOrders
       TRANSITIONS = {
         received: %i[diagnosing rejected],
         diagnosing: %i[awaiting_approval rejected],
-        awaiting_approval: %i[in_progress rejected],
+        awaiting_approval: %i[approved rejected],
+        approved: %i[in_progress],
         in_progress: %i[completed],
         completed: %i[delivered],
         delivered: [],

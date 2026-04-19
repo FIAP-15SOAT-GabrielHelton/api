@@ -33,8 +33,12 @@ describe WorkOrders::ValueObjects::WorkOrderStatus do
       expect(described_class.new(:diagnosing).can_transition_to?(:awaiting_approval)).to be true
     end
 
-    it "allows awaiting_approval → in_progress" do
-      expect(described_class.new(:awaiting_approval).can_transition_to?(:in_progress)).to be true
+    it "allows awaiting_approval → approved" do
+      expect(described_class.new(:awaiting_approval).can_transition_to?(:approved)).to be true
+    end
+
+    it "allows approved → in_progress" do
+      expect(described_class.new(:approved).can_transition_to?(:in_progress)).to be true
     end
 
     it "allows in_progress → completed" do
@@ -49,7 +53,11 @@ describe WorkOrders::ValueObjects::WorkOrderStatus do
       expect(described_class.new(:received).can_transition_to?(:in_progress)).to be false
     end
 
-    it "rejects in_progress → rejected (can't reject after committed)" do
+    it "rejects approved → rejected (customer cannot un-approve after committing)" do
+      expect(described_class.new(:approved).can_transition_to?(:rejected)).to be false
+    end
+
+    it "rejects in_progress → rejected (can't reject while executing)" do
       expect(described_class.new(:in_progress).can_transition_to?(:rejected)).to be false
     end
 

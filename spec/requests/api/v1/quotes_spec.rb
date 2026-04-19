@@ -115,7 +115,7 @@ RSpec.describe "Api::V1::Quotes", type: :request do
       { wo_id: wo_id, quote_id: quote_id, item_id: item_id }
     end
 
-    it "approves the quote, moves WO to in_progress, and decrements stock" do
+    it "approves the quote, moves WO to approved, and decrements stock" do
       ids = setup_quote_with_part
 
       patch "/api/v1/quotes/#{ids[:quote_id]}/approve", as: :json
@@ -124,7 +124,7 @@ RSpec.describe "Api::V1::Quotes", type: :request do
       expect(response.parsed_body["status"]).to eq("approved")
 
       get "/api/v1/work_orders/#{ids[:wo_id]}", as: :json
-      expect(response.parsed_body["status"]).to eq("in_progress")
+      expect(response.parsed_body["status"]).to eq("approved")
 
       get "/api/v1/inventory_items/#{ids[:item_id]}", as: :json
       expect(response.parsed_body["quantity"]).to eq(2)

@@ -51,7 +51,19 @@ module WorkOrders
     end
 
     def approve
+      @status = @status.transition_to(:approved)
+    end
+
+    def execute
       @status = @status.transition_to(:in_progress)
+    end
+
+    def complete
+      @status = @status.transition_to(:completed)
+    end
+
+    def deliver
+      @status = @status.transition_to(:delivered)
     end
 
     def reject

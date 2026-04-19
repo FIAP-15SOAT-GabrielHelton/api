@@ -258,4 +258,98 @@ RSpec.describe "Api::V1::WorkOrders", type: :request do
       expect(response).to have_http_status(:unprocessable_entity)
     end
   end
+
+  def setup_approved_work_order
+    customer_id = create_customer
+    vehicle_id = create_vehicle(customer_id)
+    wo_id = create_work_order(customer_id, vehicle_id)
+    service_id = create_service
+    patch "/api/v1/work_orders/#{wo_id}/assign", params: { mechanic_id: 1 }, as: :json
+    post "/api/v1/work_orders/#{wo_id}/line_items",
+         params: { item_type: "service", reference_id: service_id, quantity: 1 }, as: :json
+    patch "/api/v1/work_orders/#{wo_id}/diagnose", as: :json
+    quote_id = Persistence::Quotes::QuoteRecord.find_by(work_order_id: wo_id).id
+    patch "/api/v1/quotes/#{quote_id}/send_to_customer", as: :json
+    patch "/api/v1/quotes/#{quote_id}/approve", as: :json
+    { wo_id: wo_id, vehicle_id: vehicle_id }
+  end
+
+  describe "PATCH /api/v1/work_orders/:id/execute" do
+    it "transitions approved → in_progress" do
+      ids = setup_approved_work_order
+
+      patch "/api/v1/work_orders/#{ids[:wo_id]}/execute", as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body["status"]).to eq("in_progress")
+    end
+
+    it "returns 422 when work order is not approved" do
+      customer_id = create_customer
+      vehicle_id = create_vehicle(customer_id)
+      wo_id = create_work_order(customer_id, vehicle_id)
+
+      patch "/api/v1/work_orders/#{wo_id}/execute", as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+  end
+
+  describe "PATCH /api/v1/work_orders/:id/complete" do
+    it "transitions in_progress → completed and updates vehicle mileage" do
+      ids = setup_approved_work_order
+      patch "/api/v1/work_orders/#{ids[:wo_id]}/execute", as: :json
+
+      patch "/api/v1/work_orders/#{ids[:wo_id]}/complete", params: { current_mileage: 55_000 }, as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body["status"]).to eq("completed")
+
+      get "/api/v1/vehicles/#{ids[:vehicle_id]}", as: :json
+      expect(response.parsed_body["mileage"]).to eq(55_000)
+    end
+
+    it "returns 422 when current_mileage is missing" do
+      ids = setup_approved_work_order
+      patch "/api/v1/work_orders/#{ids[:wo_id]}/execute", as: :json
+
+      patch "/api/v1/work_orders/#{ids[:wo_id]}/complete", params: {}, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+
+    it "rolls back when mileage would decrease (vehicle mileage VO rejects)" do
+      ids = setup_approved_work_order
+      patch "/api/v1/work_orders/#{ids[:wo_id]}/execute", as: :json
+
+      patch "/api/v1/work_orders/#{ids[:wo_id]}/complete", params: { current_mileage: 10 }, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+
+      get "/api/v1/work_orders/#{ids[:wo_id]}", as: :json
+      expect(response.parsed_body["status"]).to eq("in_progress")
+    end
+  end
+
+  describe "PATCH /api/v1/work_orders/:id/deliver" do
+    it "transitions completed → delivered" do
+      ids = setup_approved_work_order
+      patch "/api/v1/work_orders/#{ids[:wo_id]}/execute", as: :json
+      patch "/api/v1/work_orders/#{ids[:wo_id]}/complete", params: { current_mileage: 55_000 }, as: :json
+
+      patch "/api/v1/work_orders/#{ids[:wo_id]}/deliver", as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body["status"]).to eq("delivered")
+    end
+
+    it "returns 422 when work order is not completed" do
+      ids = setup_approved_work_order
+      patch "/api/v1/work_orders/#{ids[:wo_id]}/execute", as: :json
+
+      patch "/api/v1/work_orders/#{ids[:wo_id]}/deliver", as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+  end
 end
