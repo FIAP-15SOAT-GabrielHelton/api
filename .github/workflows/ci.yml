@@ -70,6 +70,7 @@ jobs:
 
     env:
       RAILS_ENV: test
+      COVERAGE: "1"
       DATABASE_HOST: localhost
       DATABASE_PORT: 5432
       DATABASE_USERNAME: postgres
