@@ -15,7 +15,12 @@ Rails.application.routes.draw do
         end
       end
 
-      resources :inventory_items, only: %i[index show create update destroy]
+      resources :inventory_items, only: %i[index show create update destroy] do
+        member do
+          patch :add_quantity
+          patch :decrease_quantity
+        end
+      end
 
       resources :services, only: %i[index show create update destroy]
 

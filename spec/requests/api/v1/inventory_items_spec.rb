@@ -171,4 +171,81 @@ RSpec.describe "Api::V1::InventoryItems", type: :request do
       expect(response).to have_http_status(:unprocessable_entity)
     end
   end
+
+  describe "PATCH /api/v1/inventory_items/:id/add_quantity" do
+    it "increments quantity and returns the full item" do
+      post "/api/v1/inventory_items", params: valid_params, as: :json
+      item_id = response.parsed_body["id"]
+
+      patch "/api/v1/inventory_items/#{item_id}/add_quantity", params: { amount: 5 }, as: :json
+
+      expect(response).to have_http_status(:ok)
+      body = response.parsed_body
+      expect(body["quantity"]).to eq(15)
+      expect(body["code"]).to eq("BP-001")
+    end
+
+    it "returns 422 when amount is zero" do
+      post "/api/v1/inventory_items", params: valid_params, as: :json
+      item_id = response.parsed_body["id"]
+
+      patch "/api/v1/inventory_items/#{item_id}/add_quantity", params: { amount: 0 }, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+
+    it "returns 422 when amount is negative" do
+      post "/api/v1/inventory_items", params: valid_params, as: :json
+      item_id = response.parsed_body["id"]
+
+      patch "/api/v1/inventory_items/#{item_id}/add_quantity", params: { amount: -3 }, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+
+    it "returns 422 when item not found" do
+      patch "/api/v1/inventory_items/999999/add_quantity", params: { amount: 5 }, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+  end
+
+  describe "PATCH /api/v1/inventory_items/:id/decrease_quantity" do
+    it "decrements quantity and returns the full item" do
+      post "/api/v1/inventory_items", params: valid_params, as: :json
+      item_id = response.parsed_body["id"]
+
+      patch "/api/v1/inventory_items/#{item_id}/decrease_quantity", params: { amount: 3 }, as: :json
+
+      expect(response).to have_http_status(:ok)
+      body = response.parsed_body
+      expect(body["quantity"]).to eq(7)
+      expect(body["code"]).to eq("BP-001")
+    end
+
+    it "returns 422 when stock would go below zero" do
+      post "/api/v1/inventory_items", params: valid_params, as: :json
+      item_id = response.parsed_body["id"]
+
+      patch "/api/v1/inventory_items/#{item_id}/decrease_quantity", params: { amount: 50 }, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body["error"]).to match(/Insufficient stock/)
+    end
+
+    it "returns 422 when amount is zero" do
+      post "/api/v1/inventory_items", params: valid_params, as: :json
+      item_id = response.parsed_body["id"]
+
+      patch "/api/v1/inventory_items/#{item_id}/decrease_quantity", params: { amount: 0 }, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+
+    it "returns 422 when item not found" do
+      patch "/api/v1/inventory_items/999999/decrease_quantity", params: { amount: 5 }, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+  end
 end
