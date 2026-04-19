@@ -14,6 +14,8 @@ Rails.application.routes.draw do
           patch :update_mileage
         end
       end
+
+      resources :work_orders, only: %i[show create]
     end
   end
 end
