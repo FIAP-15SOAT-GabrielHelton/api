@@ -2,16 +2,13 @@
 
 require "spec_helper"
 require_relative "../../../app/domains/work_orders/work_order"
-require_relative "../../../app/application/work_orders/approve_work_order"
+require_relative "../../../app/application/work_orders/deliver_work_order"
 
-describe WorkOrders::ApproveWorkOrder do
+describe WorkOrders::DeliverWorkOrder do
   let(:work_order) do
     WorkOrders::WorkOrder.new(
-      id: 1,
-      customer_id: 10,
-      vehicle_id: 20,
-      problem_description: "x",
-      status: :awaiting_approval
+      id: 1, customer_id: 10, vehicle_id: 20,
+      problem_description: "x", status: :completed
     )
   end
 
@@ -26,11 +23,11 @@ describe WorkOrders::ApproveWorkOrder do
   let(:use_case) { described_class.new(work_order_repository: repository) }
 
   describe "#call" do
-    it "transitions awaiting_approval → approved" do
+    it "transitions completed → delivered" do
       result = use_case.call(id: 1)
 
       expect(result).to be_success
-      expect(result.value.approved?).to be true
+      expect(result.value.delivered?).to be true
     end
 
     it "returns failure when WO not found" do
@@ -39,9 +36,10 @@ describe WorkOrders::ApproveWorkOrder do
       expect(result).to be_failure
     end
 
-    it "returns failure from invalid transition" do
+    it "returns failure when WO is not completed" do
       allow(repository).to receive(:find).with(1).and_return(
-        WorkOrders::WorkOrder.new(id: 1, customer_id: 10, vehicle_id: 20, problem_description: "x")
+        WorkOrders::WorkOrder.new(id: 1, customer_id: 10, vehicle_id: 20,
+                                   problem_description: "x", status: :in_progress)
       )
 
       result = use_case.call(id: 1)

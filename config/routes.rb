@@ -25,10 +25,17 @@ Rails.application.routes.draw do
       resources :services, only: %i[index show create update destroy]
 
       resources :work_orders, only: %i[show create] do
+        collection do
+          get :ready_to_execute
+        end
+
         member do
           patch :assign
           patch :diagnose
           post :line_items, action: :add_line_item
+          patch :execute
+          patch :complete
+          patch :deliver
         end
       end
 

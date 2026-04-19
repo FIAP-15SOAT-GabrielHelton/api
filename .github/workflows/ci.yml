@@ -70,6 +70,7 @@ jobs:
 
     env:
       RAILS_ENV: test
+      COVERAGE: "1"
       DATABASE_HOST: localhost
       DATABASE_PORT: 5432
       DATABASE_USERNAME: postgres
@@ -89,3 +90,21 @@ jobs:
 
       - name: Run tests
         run: bundle exec rspec
+
+      - name: Write coverage to job summary
+        if: always()
+        run: |
+          if [ -f coverage/.last_run.json ]; then
+            line=$(jq -r '.result.line' coverage/.last_run.json)
+            branch=$(jq -r '.result.branch' coverage/.last_run.json)
+            {
+              echo "## Coverage"
+              echo ""
+              echo "| Metric | Coverage |"
+              echo "| --- | --- |"
+              echo "| Line | ${line}% |"
+              echo "| Branch | ${branch}% |"
+              echo ""
+              echo "Threshold: 80% line / 80% branch (enforced by SimpleCov)"
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
