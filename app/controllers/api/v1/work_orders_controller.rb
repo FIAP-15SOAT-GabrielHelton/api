@@ -13,6 +13,12 @@ module Api
         end
       end
 
+      def ready_to_execute
+        result = list_approved_work_orders.call
+
+        render json: result.value.map { |wo| serialize(wo) }
+      end
+
       def create
         result = create_work_order.call(**create_params)
 
@@ -112,6 +118,10 @@ module Api
 
       def find_work_order
         WorkOrders::FindWorkOrder.new(work_order_repository: work_order_repository)
+      end
+
+      def list_approved_work_orders
+        WorkOrders::ListApprovedWorkOrders.new(work_order_repository: work_order_repository)
       end
 
       def assign_work_order

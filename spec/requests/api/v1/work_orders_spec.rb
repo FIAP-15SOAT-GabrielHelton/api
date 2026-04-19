@@ -274,6 +274,48 @@ RSpec.describe "Api::V1::WorkOrders", type: :request do
     { wo_id: wo_id, vehicle_id: vehicle_id }
   end
 
+  describe "GET /api/v1/work_orders/ready_to_execute" do
+    def drive_wo_to_approved(customer_id, vehicle_id, service_id)
+      post "/api/v1/work_orders",
+           params: { customer_id: customer_id, vehicle_id: vehicle_id, problem_description: "x" }, as: :json
+      wo_id = response.parsed_body["id"]
+      patch "/api/v1/work_orders/#{wo_id}/assign", params: { mechanic_id: 1 }, as: :json
+      post "/api/v1/work_orders/#{wo_id}/line_items",
+           params: { item_type: "service", reference_id: service_id, quantity: 1 }, as: :json
+      patch "/api/v1/work_orders/#{wo_id}/diagnose", as: :json
+      quote_id = Persistence::Quotes::QuoteRecord.find_by(work_order_id: wo_id).id
+      patch "/api/v1/quotes/#{quote_id}/send_to_customer", as: :json
+      patch "/api/v1/quotes/#{quote_id}/approve", as: :json
+      wo_id
+    end
+
+    it "returns only approved work orders, oldest approval first" do
+      customer_id = create_customer
+      vehicle_id = create_vehicle(customer_id)
+      service_id = create_service
+
+      first_id = drive_wo_to_approved(customer_id, vehicle_id, service_id)
+      sleep 0.01
+      second_id = drive_wo_to_approved(customer_id, vehicle_id, service_id)
+      create_work_order(customer_id, vehicle_id) # not approved, should not appear
+
+      get "/api/v1/work_orders/ready_to_execute", as: :json
+
+      expect(response).to have_http_status(:ok)
+      body = response.parsed_body
+      expect(body.size).to eq(2)
+      expect(body.map { |wo| wo["status"] }).to all(eq("approved"))
+      expect(body.map { |wo| wo["id"] }).to eq([ first_id, second_id ])
+    end
+
+    it "returns an empty array when there are no approved WOs" do
+      get "/api/v1/work_orders/ready_to_execute", as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body).to eq([])
+    end
+  end
+
   describe "PATCH /api/v1/work_orders/:id/execute" do
     it "transitions approved → in_progress" do
       ids = setup_approved_work_order

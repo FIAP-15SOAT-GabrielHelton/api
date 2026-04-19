@@ -23,6 +23,14 @@ module Persistence
         WorkOrderRecord.includes(:line_item_records).map { |record| to_entity(record) }
       end
 
+      def find_all_approved
+        WorkOrderRecord
+          .includes(:line_item_records)
+          .where(status: "approved")
+          .order(updated_at: :asc)
+          .map { |record| to_entity(record) }
+      end
+
       def delete(id)
         WorkOrderRecord.find_by(id: id)&.destroy
       end
