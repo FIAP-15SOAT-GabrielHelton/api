@@ -1,6 +1,6 @@
 class CreateCustomers < ActiveRecord::Migration[8.1]
   def change
-    create_table :customers do |t|
+    create_table :customers, id: :bigint do |t|
       t.integer :person_type, null: false, default: 0
       t.string :document, null: false
       t.string :name, null: false
