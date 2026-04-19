@@ -50,6 +50,10 @@ module WorkOrders
       @status = @status.transition_to(:awaiting_approval)
     end
 
+    def approve
+      @status = @status.transition_to(:in_progress)
+    end
+
     def reject
       @status = @status.transition_to(:rejected)
     end

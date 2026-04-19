@@ -35,6 +35,8 @@ Rails.application.routes.draw do
       resources :quotes, only: %i[show] do
         member do
           patch :send_to_customer
+          patch :approve
+          patch :reject
         end
       end
     end

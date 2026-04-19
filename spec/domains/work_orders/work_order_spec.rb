@@ -156,6 +156,22 @@ describe WorkOrders::WorkOrder do
     end
   end
 
+  describe "#approve" do
+    it "transitions awaiting_approval → in_progress" do
+      wo = described_class.new(**valid_attrs.merge(status: :awaiting_approval))
+
+      wo.approve
+
+      expect(wo.in_progress?).to be true
+    end
+
+    it "rejects approve from non-awaiting_approval status" do
+      wo = described_class.new(**valid_attrs)
+
+      expect { wo.approve }.to raise_error(/Invalid transition/)
+    end
+  end
+
   describe "#reject" do
     it "transitions to rejected from received" do
       wo = described_class.new(**valid_attrs)
