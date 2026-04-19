@@ -1,10 +1,8 @@
 # frozen_string_literal: true
 
-require "spec_helper"
-require_relative "../../../app/domains/work_orders/work_order"
-require_relative "../../../app/application/work_orders/diagnose_work_order"
+require "rails_helper"
 
-describe WorkOrders::DiagnoseWorkOrder do
+RSpec.describe WorkOrders::DiagnoseWorkOrder do
   let(:line_item) do
     WorkOrders::LineItem.new(
       id: 1,
@@ -35,7 +33,15 @@ describe WorkOrders::DiagnoseWorkOrder do
     end
   end
 
-  let(:use_case) { described_class.new(work_order_repository: repository) }
+  let(:create_quote) do
+    double("CreateQuote").tap do |uc|
+      allow(uc).to receive(:call).and_return(Shared::Result.success(double("Quote")))
+    end
+  end
+
+  let(:use_case) do
+    described_class.new(work_order_repository: repository, create_quote: create_quote)
+  end
 
   describe "#call" do
     it "transitions diagnosing → awaiting_approval" do
@@ -43,6 +49,12 @@ describe WorkOrders::DiagnoseWorkOrder do
 
       expect(result).to be_success
       expect(result.value.awaiting_approval?).to be true
+    end
+
+    it "calls CreateQuote with the diagnosed work order" do
+      use_case.call(id: 1)
+
+      expect(create_quote).to have_received(:call).with(work_order: work_order)
     end
 
     it "returns failure when not found" do
@@ -63,6 +75,15 @@ describe WorkOrders::DiagnoseWorkOrder do
 
       expect(result).to be_failure
       expect(result.error).to match(/without line items/)
+    end
+
+    it "returns failure when CreateQuote fails (transaction rolls back)" do
+      allow(create_quote).to receive(:call).and_return(Shared::Result.failure("Quote save failed"))
+
+      result = use_case.call(id: 1)
+
+      expect(result).to be_failure
+      expect(result.error).to match(/Failed to create quote/)
     end
   end
 end
