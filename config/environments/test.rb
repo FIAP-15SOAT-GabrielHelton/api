@@ -28,6 +28,9 @@ Rails.application.configure do
   # Disable request forgery protection in test environment.
   config.action_controller.allow_forgery_protection = false
 
+  # Allow any host in test (avoids blocked_host errors in request specs).
+  config.host_authorization = { exclude: ->(request) { true } }
+
   # Store uploaded files on the local file system in a temporary directory.
   config.active_storage.service = :test
 
