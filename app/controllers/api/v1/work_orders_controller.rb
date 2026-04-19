@@ -23,6 +23,41 @@ module Api
         end
       end
 
+      def assign
+        result = assign_work_order.call(id: params[:id], mechanic_id: params[:mechanic_id])
+
+        if result.success?
+          render json: serialize(result.value)
+        else
+          render json: { error: result.error }, status: :unprocessable_entity
+        end
+      end
+
+      def add_line_item
+        result = add_line_item_use_case.call(
+          work_order_id: params[:id],
+          item_type: params[:item_type],
+          reference_id: params[:reference_id],
+          quantity: params[:quantity]
+        )
+
+        if result.success?
+          render json: serialize(result.value), status: :created
+        else
+          render json: { error: result.error }, status: :unprocessable_entity
+        end
+      end
+
+      def diagnose
+        result = diagnose_work_order.call(id: params[:id])
+
+        if result.success?
+          render json: serialize(result.value)
+        else
+          render json: { error: result.error }, status: :unprocessable_entity
+        end
+      end
+
       private
 
       def work_order_repository
@@ -47,6 +82,22 @@ module Api
 
       def find_work_order
         WorkOrders::FindWorkOrder.new(work_order_repository: work_order_repository)
+      end
+
+      def assign_work_order
+        WorkOrders::AssignWorkOrder.new(work_order_repository: work_order_repository)
+      end
+
+      def diagnose_work_order
+        WorkOrders::DiagnoseWorkOrder.new(work_order_repository: work_order_repository)
+      end
+
+      def add_line_item_use_case
+        WorkOrders::AddLineItem.new(
+          work_order_repository: work_order_repository,
+          service_repository: Persistence::Registrations::ActiveRecordServiceRepository.new,
+          inventory_item_repository: Persistence::Inventory::ActiveRecordInventoryItemRepository.new
+        )
       end
 
       def create_params

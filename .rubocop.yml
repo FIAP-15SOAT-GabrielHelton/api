@@ -61,3 +61,6 @@ RSpec/VerifiedDoubles:
 
 RSpec/MessageSpies:
   Enabled: false
+
+RSpec/MultipleMemoizedHelpers:
+  Max: 8

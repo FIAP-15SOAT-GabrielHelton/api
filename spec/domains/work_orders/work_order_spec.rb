@@ -66,4 +66,125 @@ describe WorkOrders::WorkOrder do
       end
     end
   end
+
+  describe "#assign" do
+    it "transitions received → diagnosing and sets mechanic_id" do
+      wo = described_class.new(**valid_attrs)
+
+      wo.assign(99)
+
+      expect(wo.diagnosing?).to be true
+      expect(wo.mechanic_id).to eq(99)
+    end
+
+    it "rejects nil mechanic_id" do
+      wo = described_class.new(**valid_attrs)
+
+      expect { wo.assign(nil) }.to raise_error(ArgumentError, /mechanic_id/)
+    end
+
+    it "rejects assign from a non-received status" do
+      wo = described_class.new(**valid_attrs.merge(status: :in_progress))
+
+      expect { wo.assign(99) }.to raise_error(/Invalid transition/)
+    end
+  end
+
+  describe "#add_line_item" do
+    let(:line_item) do
+      WorkOrders::LineItem.new(
+        id: nil,
+        item_type: :service,
+        reference_id: 1,
+        name_snapshot: "Oil Change",
+        price_snapshot: 5000,
+        quantity: 1
+      )
+    end
+
+    it "appends when status is diagnosing" do
+      wo = described_class.new(**valid_attrs.merge(status: :diagnosing))
+
+      wo.add_line_item(line_item)
+
+      expect(wo.line_items).to eq([ line_item ])
+    end
+
+    it "rejects when status is not diagnosing" do
+      wo = described_class.new(**valid_attrs)
+
+      expect { wo.add_line_item(line_item) }.to raise_error(/only be added during diagnosis/)
+    end
+
+    it "rejects non-LineItem arguments" do
+      wo = described_class.new(**valid_attrs.merge(status: :diagnosing))
+
+      expect { wo.add_line_item("not an item") }.to raise_error(ArgumentError, /LineItem/)
+    end
+  end
+
+  describe "#diagnose" do
+    let(:line_item) do
+      WorkOrders::LineItem.new(
+        id: nil,
+        item_type: :service,
+        reference_id: 1,
+        name_snapshot: "Oil Change",
+        price_snapshot: 5000,
+        quantity: 1
+      )
+    end
+
+    it "transitions diagnosing → awaiting_approval when items exist" do
+      wo = described_class.new(**valid_attrs.merge(status: :diagnosing, line_items: [ line_item ]))
+
+      wo.diagnose
+
+      expect(wo.awaiting_approval?).to be true
+    end
+
+    it "rejects when there are no line items" do
+      wo = described_class.new(**valid_attrs.merge(status: :diagnosing))
+
+      expect { wo.diagnose }.to raise_error(/without line items/)
+    end
+
+    it "rejects diagnose from non-diagnosing status" do
+      wo = described_class.new(**valid_attrs.merge(line_items: [ line_item ]))
+
+      expect { wo.diagnose }.to raise_error(/Invalid transition/)
+    end
+  end
+
+  describe "#reject" do
+    it "transitions to rejected from received" do
+      wo = described_class.new(**valid_attrs)
+
+      wo.reject
+
+      expect(wo.rejected?).to be true
+    end
+
+    it "transitions to rejected from diagnosing" do
+      wo = described_class.new(**valid_attrs.merge(status: :diagnosing))
+
+      wo.reject
+
+      expect(wo.rejected?).to be true
+    end
+
+    it "transitions to rejected from awaiting_approval" do
+      wo = described_class.new(**valid_attrs.merge(status: :awaiting_approval))
+
+      wo.reject
+
+      expect(wo.rejected?).to be true
+    end
+
+    it "does not allow rejecting after in_progress" do
+      wo = described_class.new(**valid_attrs.merge(status: :in_progress))
+
+      expect { wo.reject }.to raise_error(/Invalid transition/)
+    end
+  end
 end

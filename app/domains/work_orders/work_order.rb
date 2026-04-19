@@ -30,6 +30,30 @@ module WorkOrders
       define_method("#{state}?") { status.value == state }
     end
 
+    def assign(mechanic_id)
+      raise ArgumentError, "mechanic_id is required" if mechanic_id.nil?
+
+      @status = @status.transition_to(:diagnosing)
+      @mechanic_id = mechanic_id
+    end
+
+    def add_line_item(line_item)
+      raise "Line items can only be added during diagnosis (current status: #{status})" unless diagnosing?
+      raise ArgumentError, "Expected a LineItem" unless line_item.is_a?(LineItem)
+
+      @line_items << line_item
+    end
+
+    def diagnose
+      raise "Cannot diagnose a work order without line items" if line_items.empty?
+
+      @status = @status.transition_to(:awaiting_approval)
+    end
+
+    def reject
+      @status = @status.transition_to(:rejected)
+    end
+
     private
 
     def ensure_status(value)
