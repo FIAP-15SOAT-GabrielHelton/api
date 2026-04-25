@@ -29,7 +29,11 @@ Rails.application.routes.draw do
 
       resources :services, only: %i[index show create update destroy]
 
-      resources :work_orders, only: %i[show create] do
+      namespace :admin do
+        get :metrics, to: "metrics#show"
+      end
+
+      resources :work_orders, only: %i[index show create] do
         collection do
           get :ready_to_execute
         end

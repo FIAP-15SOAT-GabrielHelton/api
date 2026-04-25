@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_04_25_195416) do
+ActiveRecord::Schema[8.1].define(version: 2026_04_25_201111) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -118,14 +118,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_25_195416) do
   end
 
   create_table "work_orders", force: :cascade do |t|
+    t.datetime "completed_at"
     t.datetime "created_at", null: false
     t.bigint "customer_id", null: false
+    t.datetime "executed_at"
     t.bigint "mechanic_id"
     t.text "problem_description", null: false
     t.string "protocol", null: false
     t.string "status", default: "received", null: false
     t.datetime "updated_at", null: false
     t.bigint "vehicle_id", null: false
+    t.index ["completed_at"], name: "index_work_orders_on_completed_at"
     t.index ["customer_id"], name: "index_work_orders_on_customer_id"
     t.index ["protocol"], name: "index_work_orders_on_protocol", unique: true
     t.index ["status"], name: "index_work_orders_on_status"
