@@ -38,11 +38,32 @@ module Persistence
         to_entity(record)
       end
 
+      def search(criteria: {}, page: 1, per_page: 20)
+        scope = apply_filters(WorkOrderRecord.includes(:line_item_records), criteria)
+        total = scope.count
+        entries = scope
+          .order(created_at: :desc)
+          .limit(per_page)
+          .offset((page - 1) * per_page)
+          .map { |record| to_entity(record) }
+
+        { entries: entries, total: total }
+      end
+
       def delete(id)
         WorkOrderRecord.find_by(id: id)&.destroy
       end
 
       private
+
+      def apply_filters(scope, criteria)
+        scope = scope.where(status: criteria[:status].to_s) if criteria[:status]
+        scope = scope.where(customer_id: criteria[:customer_id]) if criteria[:customer_id]
+        scope = scope.where(mechanic_id: criteria[:mechanic_id]) if criteria[:mechanic_id]
+        scope = scope.where(created_at: criteria[:start_date]..) if criteria[:start_date]
+        scope = scope.where(created_at: ..criteria[:end_date]) if criteria[:end_date]
+        scope
+      end
 
       def persist_work_order(work_order)
         if work_order.id
@@ -75,7 +96,9 @@ module Persistence
           line_items: record.line_item_records.map { |line_record| line_item_to_entity(line_record) },
           protocol: record.protocol,
           created_at: record.created_at,
-          updated_at: record.updated_at
+          updated_at: record.updated_at,
+          executed_at: record.executed_at,
+          completed_at: record.completed_at
         )
       end
 
@@ -97,7 +120,9 @@ module Persistence
           problem_description: work_order.problem_description,
           status: work_order.status.to_s,
           mechanic_id: work_order.mechanic_id,
-          protocol: work_order.protocol
+          protocol: work_order.protocol,
+          executed_at: work_order.executed_at,
+          completed_at: work_order.completed_at
         }
       end
 

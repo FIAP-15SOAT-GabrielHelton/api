@@ -13,5 +13,10 @@ module WorkOrders
     def find_by_protocol(protocol)
       raise NotImplementedError, "#{self.class}#find_by_protocol not implemented"
     end
+
+    # Returns a hash { entries: Array<WorkOrder>, total: Integer }
+    def search(criteria: {}, page: 1, per_page: 20)
+      raise NotImplementedError, "#{self.class}#search not implemented"
+    end
   end
 end

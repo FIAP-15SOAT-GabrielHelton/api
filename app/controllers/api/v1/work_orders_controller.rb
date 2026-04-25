@@ -3,11 +3,25 @@
 module Api
   module V1
     class WorkOrdersController < Api::V1::ApplicationController
+      def index
+        result = list_work_orders.call(**list_params)
+
+        render json: {
+          data: result.value[:entries].map { |wo| serialize(wo) },
+          pagination: {
+            page: result.value[:page],
+            per_page: result.value[:per_page],
+            total: result.value[:total],
+            total_pages: result.value[:total_pages]
+          }
+        }
+      end
+
       def show
-        result = find_work_order.call(id: params[:id])
+        result = find_work_order_details.call(id: params[:id])
 
         if result.success?
-          render json: serialize(result.value)
+          render json: serialize_details(result.value)
         else
           render json: { error: result.error }, status: :not_found
         end
@@ -116,8 +130,17 @@ module Api
         )
       end
 
-      def find_work_order
-        WorkOrders::FindWorkOrder.new(work_order_repository: work_order_repository)
+      def find_work_order_details
+        WorkOrders::FindWorkOrderDetails.new(
+          work_order_repository: work_order_repository,
+          customer_repository: customer_repository,
+          vehicle_repository: vehicle_repository,
+          quote_repository: quote_repository
+        )
+      end
+
+      def list_work_orders
+        WorkOrders::ListWorkOrders.new(work_order_repository: work_order_repository)
       end
 
       def list_approved_work_orders
@@ -174,6 +197,11 @@ module Api
         params.permit(:customer_id, :vehicle_id, :problem_description).to_h.symbolize_keys
       end
 
+      def list_params
+        params.permit(:status, :customer_id, :mechanic_id, :start_date, :end_date, :page, :per_page)
+              .to_h.symbolize_keys
+      end
+
       def serialize(work_order)
         {
           id: work_order.id,
@@ -183,8 +211,53 @@ module Api
           status: work_order.status.to_s,
           mechanic_id: work_order.mechanic_id,
           line_items: work_order.line_items.map { |item| serialize_line_item(item) },
+          protocol: work_order.protocol,
+          executed_at: work_order.executed_at,
+          completed_at: work_order.completed_at,
           created_at: work_order.created_at,
           updated_at: work_order.updated_at
+        }
+      end
+
+      def serialize_details(details)
+        serialize(details[:work_order]).merge(
+          customer: serialize_customer(details[:customer]),
+          vehicle: serialize_vehicle(details[:vehicle]),
+          quote: serialize_quote(details[:quote])
+        )
+      end
+
+      def serialize_customer(customer)
+        return nil unless customer
+
+        {
+          id: customer.id, name: customer.name,
+          document: customer.document.formatted, email: customer.email, phone: customer.phone
+        }
+      end
+
+      def serialize_vehicle(vehicle)
+        return nil unless vehicle
+
+        {
+          id: vehicle.id, license_plate: vehicle.license_plate.value,
+          make: vehicle.make, model: vehicle.model, year: vehicle.year,
+          color: vehicle.color, mileage: vehicle.mileage.value
+        }
+      end
+
+      def serialize_quote(quote)
+        return nil unless quote
+
+        {
+          id: quote.id, status: quote.status.to_s,
+          total: quote.total.format,
+          line_items: quote.line_items.map do |item|
+            {
+              description: item.description, quantity: item.quantity,
+              unit_price: item.unit_price.format, subtotal: item.subtotal.format
+            }
+          end
         }
       end
 
