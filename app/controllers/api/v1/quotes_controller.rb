@@ -2,7 +2,7 @@
 
 module Api
   module V1
-    class QuotesController < ApplicationController
+    class QuotesController < Api::V1::ApplicationController
       def show
         result = find_quote.call(id: params[:id])
 

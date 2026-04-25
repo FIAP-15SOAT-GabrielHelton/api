@@ -2,7 +2,9 @@
 
 module Api
   module V1
-    class TrackingController < ApplicationController
+    class TrackingController < Api::V1::ApplicationController
+      skip_before_action :authenticate!
+
       def show
         result = track_work_order.call(protocol: params[:protocol])
 

@@ -2,7 +2,7 @@
 
 module Api
   module V1
-    class VehiclesController < ApplicationController
+    class VehiclesController < Api::V1::ApplicationController
       def index
         result = list_customer_vehicles.call(customer_id: params[:customer_id])
 

@@ -2,7 +2,7 @@
 
 module Api
   module V1
-    class ServicesController < ApplicationController
+    class ServicesController < Api::V1::ApplicationController
       def index
         result = list_services.call
 

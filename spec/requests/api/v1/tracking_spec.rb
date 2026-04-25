@@ -22,24 +22,24 @@ RSpec.describe "Api::V1::Tracking", type: :request do
   let(:inventory_params) { { name: "Brake Pad", code: "BP-01", unit_price: 2000, quantity: 5 } }
 
   def create_diagnosed_work_order
-    post "/api/v1/customers", params: customer_params, as: :json
+    post "/api/v1/customers", params: customer_params, headers: auth_headers, as: :json
     customer_id = response.parsed_body["id"]
-    post "/api/v1/vehicles", params: vehicle_params.merge(customer_id: customer_id), as: :json
+    post "/api/v1/vehicles", params: vehicle_params.merge(customer_id: customer_id), headers: auth_headers, as: :json
     vehicle_id = response.parsed_body["id"]
-    post "/api/v1/services", params: service_params, as: :json
+    post "/api/v1/services", params: service_params, headers: auth_headers, as: :json
     service_id = response.parsed_body["id"]
-    post "/api/v1/inventory_items", params: inventory_params, as: :json
+    post "/api/v1/inventory_items", params: inventory_params, headers: auth_headers, as: :json
     item_id = response.parsed_body["id"]
     post "/api/v1/work_orders",
          params: { customer_id: customer_id, vehicle_id: vehicle_id, problem_description: "Engine noise" },
-         as: :json
+         headers: auth_headers, as: :json
     wo_id = response.parsed_body["id"]
-    patch "/api/v1/work_orders/#{wo_id}/assign", params: { mechanic_id: 1 }, as: :json
+    patch "/api/v1/work_orders/#{wo_id}/assign", params: { mechanic_id: 1 }, headers: auth_headers, as: :json
     post "/api/v1/work_orders/#{wo_id}/line_items",
-         params: { item_type: "service", reference_id: service_id, quantity: 1 }, as: :json
+         params: { item_type: "service", reference_id: service_id, quantity: 1 }, headers: auth_headers, as: :json
     post "/api/v1/work_orders/#{wo_id}/line_items",
-         params: { item_type: "part", reference_id: item_id, quantity: 1 }, as: :json
-    patch "/api/v1/work_orders/#{wo_id}/diagnose", as: :json
+         params: { item_type: "part", reference_id: item_id, quantity: 1 }, headers: auth_headers, as: :json
+    patch "/api/v1/work_orders/#{wo_id}/diagnose", headers: auth_headers, as: :json
     Persistence::WorkOrders::WorkOrderRecord.find(wo_id).protocol
   end
 

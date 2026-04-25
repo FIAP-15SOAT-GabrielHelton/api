@@ -22,7 +22,7 @@ RSpec.describe "Api::V1::Customers", type: :request do
 
   describe "POST /api/v1/customers" do
     it "creates a customer with valid data" do
-      post "/api/v1/customers", params: valid_params, as: :json
+      post "/api/v1/customers", params: valid_params, headers: auth_headers, as: :json
 
       expect(response).to have_http_status(:created)
 
@@ -35,7 +35,7 @@ RSpec.describe "Api::V1::Customers", type: :request do
     end
 
     it "returns 422 with invalid document" do
-      post "/api/v1/customers", params: valid_params.merge(document: "00000000000"), as: :json
+      post "/api/v1/customers", params: valid_params.merge(document: "00000000000"), headers: auth_headers, as: :json
 
       expect(response).to have_http_status(:unprocessable_entity)
 
@@ -44,8 +44,8 @@ RSpec.describe "Api::V1::Customers", type: :request do
     end
 
     it "returns 422 with duplicate document" do
-      post "/api/v1/customers", params: valid_params, as: :json
-      post "/api/v1/customers", params: valid_params.merge(name: "Outro"), as: :json
+      post "/api/v1/customers", params: valid_params, headers: auth_headers, as: :json
+      post "/api/v1/customers", params: valid_params.merge(name: "Outro"), headers: auth_headers, as: :json
 
       expect(response).to have_http_status(:unprocessable_entity)
 
@@ -59,7 +59,7 @@ RSpec.describe "Api::V1::Customers", type: :request do
         document: "11.222.333/0001-81"
       )
 
-      post "/api/v1/customers", params: company_params, as: :json
+      post "/api/v1/customers", params: company_params, headers: auth_headers, as: :json
 
       expect(response).to have_http_status(:created)
 
@@ -71,22 +71,22 @@ RSpec.describe "Api::V1::Customers", type: :request do
 
   describe "GET /api/v1/customers" do
     it "returns all customers" do
-      post "/api/v1/customers", params: valid_params, as: :json
+      post "/api/v1/customers", params: valid_params, headers: auth_headers, as: :json
       post "/api/v1/customers", params: valid_params.merge(
         document: "11.222.333/0001-81",
         person_type: "company",
         name: "Empresa X",
         email: "x@test.com"
-      ), as: :json
+      ), headers: auth_headers, as: :json
 
-      get "/api/v1/customers", as: :json
+      get "/api/v1/customers", headers: auth_headers, as: :json
 
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body.size).to eq(2)
     end
 
     it "returns empty array when no customers" do
-      get "/api/v1/customers", as: :json
+      get "/api/v1/customers", headers: auth_headers, as: :json
 
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body).to eq([])
@@ -95,17 +95,17 @@ RSpec.describe "Api::V1::Customers", type: :request do
 
   describe "GET /api/v1/customers/:id" do
     it "returns the customer" do
-      post "/api/v1/customers", params: valid_params, as: :json
+      post "/api/v1/customers", params: valid_params, headers: auth_headers, as: :json
       customer_id = response.parsed_body["id"]
 
-      get "/api/v1/customers/#{customer_id}", as: :json
+      get "/api/v1/customers/#{customer_id}", headers: auth_headers, as: :json
 
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body["name"]).to eq("João Silva")
     end
 
     it "returns 404 when customer not found" do
-      get "/api/v1/customers/999999", as: :json
+      get "/api/v1/customers/999999", headers: auth_headers, as: :json
 
       expect(response).to have_http_status(:not_found)
     end
@@ -113,29 +113,29 @@ RSpec.describe "Api::V1::Customers", type: :request do
 
   describe "PATCH /api/v1/customers/:id" do
     it "updates customer name" do
-      post "/api/v1/customers", params: valid_params, as: :json
+      post "/api/v1/customers", params: valid_params, headers: auth_headers, as: :json
       customer_id = response.parsed_body["id"]
 
-      patch "/api/v1/customers/#{customer_id}", params: { name: "Maria Silva" }, as: :json
+      patch "/api/v1/customers/#{customer_id}", params: { name: "Maria Silva" }, headers: auth_headers, as: :json
 
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body["name"]).to eq("Maria Silva")
     end
 
     it "updates customer address" do
-      post "/api/v1/customers", params: valid_params, as: :json
+      post "/api/v1/customers", params: valid_params, headers: auth_headers, as: :json
       customer_id = response.parsed_body["id"]
 
       patch "/api/v1/customers/#{customer_id}", params: {
         address: { zip_code: "02002-000", street: "Rua Nova", number: "42", city: "RJ", state: "RJ" }
-      }, as: :json
+      }, headers: auth_headers, as: :json
 
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body["address"]["street"]).to eq("Rua Nova")
     end
 
     it "returns 422 when customer not found" do
-      patch "/api/v1/customers/999999", params: { name: "Test" }, as: :json
+      patch "/api/v1/customers/999999", params: { name: "Test" }, headers: auth_headers, as: :json
 
       expect(response).to have_http_status(:unprocessable_entity)
     end
@@ -143,28 +143,28 @@ RSpec.describe "Api::V1::Customers", type: :request do
 
   describe "DELETE /api/v1/customers/:id" do
     it "deactivates the customer" do
-      post "/api/v1/customers", params: valid_params, as: :json
+      post "/api/v1/customers", params: valid_params, headers: auth_headers, as: :json
       customer_id = response.parsed_body["id"]
 
-      delete "/api/v1/customers/#{customer_id}", as: :json
+      delete "/api/v1/customers/#{customer_id}", headers: auth_headers, as: :json
 
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body["status"]).to eq("inactive")
     end
 
     it "returns 422 when already inactive" do
-      post "/api/v1/customers", params: valid_params, as: :json
+      post "/api/v1/customers", params: valid_params, headers: auth_headers, as: :json
       customer_id = response.parsed_body["id"]
 
-      delete "/api/v1/customers/#{customer_id}", as: :json
-      delete "/api/v1/customers/#{customer_id}", as: :json
+      delete "/api/v1/customers/#{customer_id}", headers: auth_headers, as: :json
+      delete "/api/v1/customers/#{customer_id}", headers: auth_headers, as: :json
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(response.parsed_body["error"]).to match(/already inactive/)
     end
 
     it "returns 422 when customer not found" do
-      delete "/api/v1/customers/999999", as: :json
+      delete "/api/v1/customers/999999", headers: auth_headers, as: :json
 
       expect(response).to have_http_status(:unprocessable_entity)
     end

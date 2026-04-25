@@ -2,7 +2,7 @@
 
 module Api
   module V1
-    class InventoryItemsController < ApplicationController
+    class InventoryItemsController < Api::V1::ApplicationController
       def index
         result = list_inventory_items.call
 
