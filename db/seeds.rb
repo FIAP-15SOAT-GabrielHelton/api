@@ -2,24 +2,35 @@
 # development, test). The code here should be idempotent so that it can be executed at any point in every environment.
 # The data can then be loaded with the bin/rails db:seed command (or created alongside the database with db:setup).
 
-admin_email = ENV.fetch("SEED_ADMIN_EMAIL", "admin@oficina.local")
-admin_password = ENV.fetch("SEED_ADMIN_PASSWORD", "changeme123")
-admin_name = ENV.fetch("SEED_ADMIN_NAME", "Administrator")
-
 repository = Persistence::Accounts::ActiveRecordUserRepository.new
+register = Accounts::RegisterUser.new(user_repository: repository)
 
-if repository.find_by_email(admin_email)
-  puts "Seed: admin user '#{admin_email}' already exists, skipping."
-else
-  result = Accounts::RegisterUser.new(user_repository: repository).call(
-    email: admin_email,
-    name: admin_name,
-    password: admin_password
-  )
+users_to_seed = [
+  {
+    email: ENV.fetch("SEED_ADMIN_EMAIL", "admin@oficina.local"),
+    password: ENV.fetch("SEED_ADMIN_PASSWORD", "changeme123"),
+    name: ENV.fetch("SEED_ADMIN_NAME", "Administrator"),
+    role: :admin
+  },
+  {
+    email: ENV.fetch("SEED_MECHANIC_EMAIL", "mechanic@oficina.local"),
+    password: ENV.fetch("SEED_MECHANIC_PASSWORD", "changeme123"),
+    name: ENV.fetch("SEED_MECHANIC_NAME", "Default Mechanic"),
+    role: :mechanic
+  }
+]
+
+users_to_seed.each do |user_attrs|
+  if repository.find_by_email(user_attrs[:email])
+    puts "Seed: user '#{user_attrs[:email]}' already exists, skipping."
+    next
+  end
+
+  result = register.call(**user_attrs)
 
   if result.success?
-    puts "Seed: created admin user '#{admin_email}'."
+    puts "Seed: created #{user_attrs[:role]} user '#{user_attrs[:email]}'."
   else
-    warn "Seed: failed to create admin user '#{admin_email}': #{result.error}"
+    warn "Seed: failed to create user '#{user_attrs[:email]}': #{result.error}"
   end
 end

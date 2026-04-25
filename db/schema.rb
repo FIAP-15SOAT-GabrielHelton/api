@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_04_25_201111) do
+ActiveRecord::Schema[8.1].define(version: 2026_04_25_203211) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -95,9 +95,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_25_201111) do
     t.string "email", null: false
     t.string "name", null: false
     t.string "password_digest", null: false
+    t.integer "role", default: 0, null: false
     t.integer "status", default: 0, null: false
     t.datetime "updated_at", null: false
     t.index ["email"], name: "index_users_on_email", unique: true
+    t.index ["role"], name: "index_users_on_role"
     t.index ["status"], name: "index_users_on_status"
   end
 
@@ -130,6 +132,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_25_201111) do
     t.bigint "vehicle_id", null: false
     t.index ["completed_at"], name: "index_work_orders_on_completed_at"
     t.index ["customer_id"], name: "index_work_orders_on_customer_id"
+    t.index ["mechanic_id"], name: "index_work_orders_on_mechanic_id"
     t.index ["protocol"], name: "index_work_orders_on_protocol", unique: true
     t.index ["status"], name: "index_work_orders_on_status"
     t.index ["vehicle_id"], name: "index_work_orders_on_vehicle_id"
@@ -140,5 +143,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_25_201111) do
   add_foreign_key "quotes", "work_orders"
   add_foreign_key "vehicles", "customers"
   add_foreign_key "work_orders", "customers"
+  add_foreign_key "work_orders", "users", column: "mechanic_id", on_delete: :nullify
   add_foreign_key "work_orders", "vehicles"
 end

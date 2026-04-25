@@ -47,7 +47,8 @@ module Persistence
           email: record.email,
           name: record.name,
           password_digest: record.password_digest,
-          status: record.status.to_sym
+          status: record.status.to_sym,
+          role: record.role.to_sym
         )
       end
 
@@ -56,7 +57,8 @@ module Persistence
           email: user.email.address,
           name: user.name,
           password_digest: user.password_digest,
-          status: user.status
+          status: user.status,
+          role: user.role
         }
       end
     end

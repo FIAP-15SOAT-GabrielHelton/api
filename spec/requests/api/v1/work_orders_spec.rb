@@ -143,12 +143,12 @@ RSpec.describe "Api::V1::WorkOrders", type: :request do
       vehicle_id = create_vehicle(customer_id)
       wo_id = create_work_order(customer_id, vehicle_id)
 
-      patch "/api/v1/work_orders/#{wo_id}/assign", params: { mechanic_id: 42 }, headers: auth_headers, as: :json
+      patch "/api/v1/work_orders/#{wo_id}/assign", params: { mechanic_id: default_test_mechanic.id }, headers: auth_headers, as: :json
 
       expect(response).to have_http_status(:ok)
       body = response.parsed_body
       expect(body["status"]).to eq("diagnosing")
-      expect(body["mechanic_id"]).to eq(42)
+      expect(body["mechanic_id"]).to eq(default_test_mechanic.id)
     end
 
     it "returns 422 when mechanic_id is missing" do
@@ -168,7 +168,7 @@ RSpec.describe "Api::V1::WorkOrders", type: :request do
       vehicle_id = create_vehicle(customer_id)
       wo_id = create_work_order(customer_id, vehicle_id)
       service_id = create_service
-      patch "/api/v1/work_orders/#{wo_id}/assign", params: { mechanic_id: 1 }, headers: auth_headers, as: :json
+      patch "/api/v1/work_orders/#{wo_id}/assign", params: { mechanic_id: default_test_mechanic.id }, headers: auth_headers, as: :json
 
       post "/api/v1/work_orders/#{wo_id}/line_items",
            params: { item_type: "service", reference_id: service_id, quantity: 1 },
@@ -186,7 +186,7 @@ RSpec.describe "Api::V1::WorkOrders", type: :request do
       vehicle_id = create_vehicle(customer_id)
       wo_id = create_work_order(customer_id, vehicle_id)
       item_id = create_inventory_item
-      patch "/api/v1/work_orders/#{wo_id}/assign", params: { mechanic_id: 1 }, headers: auth_headers, as: :json
+      patch "/api/v1/work_orders/#{wo_id}/assign", params: { mechanic_id: default_test_mechanic.id }, headers: auth_headers, as: :json
 
       post "/api/v1/work_orders/#{wo_id}/line_items",
            params: { item_type: "part", reference_id: item_id, quantity: 2 },
@@ -203,7 +203,7 @@ RSpec.describe "Api::V1::WorkOrders", type: :request do
       vehicle_id = create_vehicle(customer_id)
       wo_id = create_work_order(customer_id, vehicle_id)
       service_id = create_service
-      patch "/api/v1/work_orders/#{wo_id}/assign", params: { mechanic_id: 1 }, headers: auth_headers, as: :json
+      patch "/api/v1/work_orders/#{wo_id}/assign", params: { mechanic_id: default_test_mechanic.id }, headers: auth_headers, as: :json
 
       post "/api/v1/work_orders/#{wo_id}/line_items",
            params: { item_type: "service", reference_id: service_id, quantity: 1 },
@@ -236,7 +236,7 @@ RSpec.describe "Api::V1::WorkOrders", type: :request do
       vehicle_id = create_vehicle(customer_id)
       wo_id = create_work_order(customer_id, vehicle_id)
       service_id = create_service
-      patch "/api/v1/work_orders/#{wo_id}/assign", params: { mechanic_id: 1 }, headers: auth_headers, as: :json
+      patch "/api/v1/work_orders/#{wo_id}/assign", params: { mechanic_id: default_test_mechanic.id }, headers: auth_headers, as: :json
       post "/api/v1/work_orders/#{wo_id}/line_items",
            params: { item_type: "service", reference_id: service_id, quantity: 1 },
            headers: auth_headers, as: :json
@@ -251,7 +251,7 @@ RSpec.describe "Api::V1::WorkOrders", type: :request do
       customer_id = create_customer
       vehicle_id = create_vehicle(customer_id)
       wo_id = create_work_order(customer_id, vehicle_id)
-      patch "/api/v1/work_orders/#{wo_id}/assign", params: { mechanic_id: 1 }, headers: auth_headers, as: :json
+      patch "/api/v1/work_orders/#{wo_id}/assign", params: { mechanic_id: default_test_mechanic.id }, headers: auth_headers, as: :json
 
       patch "/api/v1/work_orders/#{wo_id}/diagnose", headers: auth_headers, as: :json
 
@@ -264,7 +264,7 @@ RSpec.describe "Api::V1::WorkOrders", type: :request do
     vehicle_id = create_vehicle(customer_id)
     wo_id = create_work_order(customer_id, vehicle_id)
     service_id = create_service
-    patch "/api/v1/work_orders/#{wo_id}/assign", params: { mechanic_id: 1 }, headers: auth_headers, as: :json
+    patch "/api/v1/work_orders/#{wo_id}/assign", params: { mechanic_id: default_test_mechanic.id }, headers: auth_headers, as: :json
     post "/api/v1/work_orders/#{wo_id}/line_items",
          params: { item_type: "service", reference_id: service_id, quantity: 1 }, headers: auth_headers, as: :json
     patch "/api/v1/work_orders/#{wo_id}/diagnose", headers: auth_headers, as: :json
@@ -279,7 +279,7 @@ RSpec.describe "Api::V1::WorkOrders", type: :request do
       post "/api/v1/work_orders",
            params: { customer_id: customer_id, vehicle_id: vehicle_id, problem_description: "x" }, headers: auth_headers, as: :json
       wo_id = response.parsed_body["id"]
-      patch "/api/v1/work_orders/#{wo_id}/assign", params: { mechanic_id: 1 }, headers: auth_headers, as: :json
+      patch "/api/v1/work_orders/#{wo_id}/assign", params: { mechanic_id: default_test_mechanic.id }, headers: auth_headers, as: :json
       post "/api/v1/work_orders/#{wo_id}/line_items",
            params: { item_type: "service", reference_id: service_id, quantity: 1 }, headers: auth_headers, as: :json
       patch "/api/v1/work_orders/#{wo_id}/diagnose", headers: auth_headers, as: :json

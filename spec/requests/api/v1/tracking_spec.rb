@@ -34,7 +34,7 @@ RSpec.describe "Api::V1::Tracking", type: :request do
          params: { customer_id: customer_id, vehicle_id: vehicle_id, problem_description: "Engine noise" },
          headers: auth_headers, as: :json
     wo_id = response.parsed_body["id"]
-    patch "/api/v1/work_orders/#{wo_id}/assign", params: { mechanic_id: 1 }, headers: auth_headers, as: :json
+    patch "/api/v1/work_orders/#{wo_id}/assign", params: { mechanic_id: default_test_mechanic.id }, headers: auth_headers, as: :json
     post "/api/v1/work_orders/#{wo_id}/line_items",
          params: { item_type: "service", reference_id: service_id, quantity: 1 }, headers: auth_headers, as: :json
     post "/api/v1/work_orders/#{wo_id}/line_items",

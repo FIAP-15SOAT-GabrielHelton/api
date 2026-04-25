@@ -6,6 +6,7 @@ module Persistence
       self.table_name = "users"
 
       enum :status, { active: 0, inactive: 1 }
+      enum :role, { admin: 0, receptionist: 1, mechanic: 2 }
 
       validates :email, presence: true, uniqueness: { case_sensitive: false }
       validates :name, :password_digest, presence: true

@@ -34,7 +34,7 @@ RSpec.describe "Api::V1::WorkOrders admin views", type: :request do
          params: { customer_id: customer_id, vehicle_id: vehicle_id, problem_description: "Engine noise" },
          headers: auth_headers, as: :json
     wo_id = response.parsed_body["id"]
-    patch "/api/v1/work_orders/#{wo_id}/assign", params: { mechanic_id: 7 }, headers: auth_headers, as: :json
+    patch "/api/v1/work_orders/#{wo_id}/assign", params: { mechanic_id: default_test_mechanic.id }, headers: auth_headers, as: :json
     post "/api/v1/work_orders/#{wo_id}/line_items",
          params: { item_type: "service", reference_id: service_id, quantity: 1 },
          headers: auth_headers, as: :json
@@ -86,7 +86,7 @@ RSpec.describe "Api::V1::WorkOrders admin views", type: :request do
     it "filters by mechanic_id" do
       create_diagnosed_work_order
 
-      get "/api/v1/work_orders", params: { mechanic_id: 7 }, headers: auth_headers
+      get "/api/v1/work_orders", params: { mechanic_id: default_test_mechanic.id }, headers: auth_headers
       expect(response.parsed_body["data"].size).to eq(1)
 
       get "/api/v1/work_orders", params: { mechanic_id: 999 }, headers: auth_headers
