@@ -2,7 +2,7 @@
 
 module Api
   module V1
-    class WorkOrdersController < ApplicationController
+    class WorkOrdersController < Api::V1::ApplicationController
       def show
         result = find_work_order.call(id: params[:id])
 

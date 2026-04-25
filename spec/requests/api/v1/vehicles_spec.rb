@@ -21,7 +21,7 @@ RSpec.describe "Api::V1::Vehicles", type: :request do
   end
 
   let(:customer_id) do
-    post "/api/v1/customers", params: customer_params, as: :json
+    post "/api/v1/customers", params: customer_params, headers: auth_headers, as: :json
     response.parsed_body["id"]
   end
 
@@ -39,7 +39,7 @@ RSpec.describe "Api::V1::Vehicles", type: :request do
 
   describe "POST /api/v1/vehicles" do
     it "creates a vehicle with valid data" do
-      post "/api/v1/vehicles", params: valid_params, as: :json
+      post "/api/v1/vehicles", params: valid_params, headers: auth_headers, as: :json
 
       expect(response).to have_http_status(:created)
 
@@ -52,29 +52,29 @@ RSpec.describe "Api::V1::Vehicles", type: :request do
     end
 
     it "creates a vehicle with Mercosul plate" do
-      post "/api/v1/vehicles", params: valid_params.merge(license_plate: "ABC1D23"), as: :json
+      post "/api/v1/vehicles", params: valid_params.merge(license_plate: "ABC1D23"), headers: auth_headers, as: :json
 
       expect(response).to have_http_status(:created)
       expect(response.parsed_body["license_plate"]).to eq("ABC1D23")
     end
 
     it "returns 422 with invalid license plate" do
-      post "/api/v1/vehicles", params: valid_params.merge(license_plate: "INVALID"), as: :json
+      post "/api/v1/vehicles", params: valid_params.merge(license_plate: "INVALID"), headers: auth_headers, as: :json
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(response.parsed_body["error"]).to match(/Invalid license plate format/)
     end
 
     it "returns 422 with duplicate license plate" do
-      post "/api/v1/vehicles", params: valid_params, as: :json
-      post "/api/v1/vehicles", params: valid_params.merge(color: "Red"), as: :json
+      post "/api/v1/vehicles", params: valid_params, headers: auth_headers, as: :json
+      post "/api/v1/vehicles", params: valid_params.merge(color: "Red"), headers: auth_headers, as: :json
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(response.parsed_body["error"]).to eq("License plate already registered")
     end
 
     it "returns 422 when customer does not exist" do
-      post "/api/v1/vehicles", params: valid_params.merge(customer_id: 999_999), as: :json
+      post "/api/v1/vehicles", params: valid_params.merge(customer_id: 999_999), headers: auth_headers, as: :json
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(response.parsed_body["error"]).to eq("Customer not found")
@@ -83,17 +83,17 @@ RSpec.describe "Api::V1::Vehicles", type: :request do
 
   describe "GET /api/v1/vehicles" do
     it "returns vehicles filtered by customer_id" do
-      post "/api/v1/vehicles", params: valid_params, as: :json
-      post "/api/v1/vehicles", params: valid_params.merge(license_plate: "XYZ-9876"), as: :json
+      post "/api/v1/vehicles", params: valid_params, headers: auth_headers, as: :json
+      post "/api/v1/vehicles", params: valid_params.merge(license_plate: "XYZ-9876"), headers: auth_headers, as: :json
 
-      get "/api/v1/vehicles?customer_id=#{customer_id}"
+      get "/api/v1/vehicles?customer_id=#{customer_id}", headers: auth_headers
 
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body.size).to eq(2)
     end
 
     it "returns empty array when no vehicles for customer" do
-      get "/api/v1/vehicles?customer_id=#{customer_id}"
+      get "/api/v1/vehicles?customer_id=#{customer_id}", headers: auth_headers
 
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body).to eq([])
@@ -102,17 +102,17 @@ RSpec.describe "Api::V1::Vehicles", type: :request do
 
   describe "GET /api/v1/vehicles/:id" do
     it "returns the vehicle" do
-      post "/api/v1/vehicles", params: valid_params, as: :json
+      post "/api/v1/vehicles", params: valid_params, headers: auth_headers, as: :json
       vehicle_id = response.parsed_body["id"]
 
-      get "/api/v1/vehicles/#{vehicle_id}", as: :json
+      get "/api/v1/vehicles/#{vehicle_id}", headers: auth_headers, as: :json
 
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body["make"]).to eq("Toyota")
     end
 
     it "returns 404 when vehicle not found" do
-      get "/api/v1/vehicles/999999", as: :json
+      get "/api/v1/vehicles/999999", headers: auth_headers, as: :json
 
       expect(response).to have_http_status(:not_found)
     end
@@ -120,17 +120,17 @@ RSpec.describe "Api::V1::Vehicles", type: :request do
 
   describe "PATCH /api/v1/vehicles/:id" do
     it "updates vehicle color" do
-      post "/api/v1/vehicles", params: valid_params, as: :json
+      post "/api/v1/vehicles", params: valid_params, headers: auth_headers, as: :json
       vehicle_id = response.parsed_body["id"]
 
-      patch "/api/v1/vehicles/#{vehicle_id}", params: { color: "Black" }, as: :json
+      patch "/api/v1/vehicles/#{vehicle_id}", params: { color: "Black" }, headers: auth_headers, as: :json
 
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body["color"]).to eq("Black")
     end
 
     it "returns 422 when vehicle not found" do
-      patch "/api/v1/vehicles/999999", params: { color: "Black" }, as: :json
+      patch "/api/v1/vehicles/999999", params: { color: "Black" }, headers: auth_headers, as: :json
 
       expect(response).to have_http_status(:unprocessable_entity)
     end
@@ -138,27 +138,27 @@ RSpec.describe "Api::V1::Vehicles", type: :request do
 
   describe "PATCH /api/v1/vehicles/:id/update_mileage" do
     it "updates mileage to higher value" do
-      post "/api/v1/vehicles", params: valid_params, as: :json
+      post "/api/v1/vehicles", params: valid_params, headers: auth_headers, as: :json
       vehicle_id = response.parsed_body["id"]
 
-      patch "/api/v1/vehicles/#{vehicle_id}/update_mileage", params: { mileage: 20_000 }, as: :json
+      patch "/api/v1/vehicles/#{vehicle_id}/update_mileage", params: { mileage: 20_000 }, headers: auth_headers, as: :json
 
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body["mileage"]).to eq(20_000)
     end
 
     it "returns 422 when mileage decreases" do
-      post "/api/v1/vehicles", params: valid_params, as: :json
+      post "/api/v1/vehicles", params: valid_params, headers: auth_headers, as: :json
       vehicle_id = response.parsed_body["id"]
 
-      patch "/api/v1/vehicles/#{vehicle_id}/update_mileage", params: { mileage: 10_000 }, as: :json
+      patch "/api/v1/vehicles/#{vehicle_id}/update_mileage", params: { mileage: 10_000 }, headers: auth_headers, as: :json
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(response.parsed_body["error"]).to match(/Mileage cannot decrease/)
     end
 
     it "returns 422 when vehicle not found" do
-      patch "/api/v1/vehicles/999999/update_mileage", params: { mileage: 20_000 }, as: :json
+      patch "/api/v1/vehicles/999999/update_mileage", params: { mileage: 20_000 }, headers: auth_headers, as: :json
 
       expect(response).to have_http_status(:unprocessable_entity)
     end

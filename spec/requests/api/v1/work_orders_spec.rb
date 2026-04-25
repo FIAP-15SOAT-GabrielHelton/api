@@ -32,12 +32,12 @@ RSpec.describe "Api::V1::WorkOrders", type: :request do
   end
 
   def create_customer
-    post "/api/v1/customers", params: customer_params, as: :json
+    post "/api/v1/customers", params: customer_params, headers: auth_headers, as: :json
     response.parsed_body["id"]
   end
 
   def create_vehicle(customer_id)
-    post "/api/v1/vehicles", params: vehicle_params.merge(customer_id: customer_id), as: :json
+    post "/api/v1/vehicles", params: vehicle_params.merge(customer_id: customer_id), headers: auth_headers, as: :json
     response.parsed_body["id"]
   end
 
@@ -52,7 +52,7 @@ RSpec.describe "Api::V1::WorkOrders", type: :request do
              vehicle_id: vehicle_id,
              problem_description: "Engine noise"
            },
-           as: :json
+           headers: auth_headers, as: :json
 
       expect(response).to have_http_status(:created)
       body = response.parsed_body
@@ -67,7 +67,7 @@ RSpec.describe "Api::V1::WorkOrders", type: :request do
 
       post "/api/v1/work_orders",
            params: { customer_id: 999_999, vehicle_id: vehicle_id, problem_description: "x" },
-           as: :json
+           headers: auth_headers, as: :json
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(response.parsed_body["error"]).to eq("Customer not found")
@@ -78,7 +78,7 @@ RSpec.describe "Api::V1::WorkOrders", type: :request do
 
       post "/api/v1/work_orders",
            params: { customer_id: customer_id, vehicle_id: 999_999, problem_description: "x" },
-           as: :json
+           headers: auth_headers, as: :json
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(response.parsed_body["error"]).to eq("Vehicle not found")
@@ -90,7 +90,7 @@ RSpec.describe "Api::V1::WorkOrders", type: :request do
 
       post "/api/v1/work_orders",
            params: { customer_id: customer_id, vehicle_id: vehicle_id },
-           as: :json
+           headers: auth_headers, as: :json
 
       expect(response).to have_http_status(:unprocessable_entity)
     end
@@ -102,17 +102,17 @@ RSpec.describe "Api::V1::WorkOrders", type: :request do
       vehicle_id = create_vehicle(customer_id)
       post "/api/v1/work_orders",
            params: { customer_id: customer_id, vehicle_id: vehicle_id, problem_description: "x" },
-           as: :json
+           headers: auth_headers, as: :json
       wo_id = response.parsed_body["id"]
 
-      get "/api/v1/work_orders/#{wo_id}", as: :json
+      get "/api/v1/work_orders/#{wo_id}", headers: auth_headers, as: :json
 
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body["id"]).to eq(wo_id)
     end
 
     it "returns 404 when work order not found" do
-      get "/api/v1/work_orders/999999", as: :json
+      get "/api/v1/work_orders/999999", headers: auth_headers, as: :json
 
       expect(response).to have_http_status(:not_found)
     end
@@ -120,20 +120,20 @@ RSpec.describe "Api::V1::WorkOrders", type: :request do
 
   def create_service(**overrides)
     base = { name: "Oil Change", description: "Full oil change", base_price: 5000, estimated_duration_minutes: 30 }
-    post "/api/v1/services", params: base.merge(overrides), as: :json
+    post "/api/v1/services", params: base.merge(overrides), headers: auth_headers, as: :json
     response.parsed_body["id"]
   end
 
   def create_inventory_item(**overrides)
     base = { name: "Brake Pad", code: "BP-001", unit_price: 2000, quantity: 5 }
-    post "/api/v1/inventory_items", params: base.merge(overrides), as: :json
+    post "/api/v1/inventory_items", params: base.merge(overrides), headers: auth_headers, as: :json
     response.parsed_body["id"]
   end
 
   def create_work_order(customer_id, vehicle_id)
     post "/api/v1/work_orders",
          params: { customer_id: customer_id, vehicle_id: vehicle_id, problem_description: "x" },
-         as: :json
+         headers: auth_headers, as: :json
     response.parsed_body["id"]
   end
 
@@ -143,7 +143,7 @@ RSpec.describe "Api::V1::WorkOrders", type: :request do
       vehicle_id = create_vehicle(customer_id)
       wo_id = create_work_order(customer_id, vehicle_id)
 
-      patch "/api/v1/work_orders/#{wo_id}/assign", params: { mechanic_id: 42 }, as: :json
+      patch "/api/v1/work_orders/#{wo_id}/assign", params: { mechanic_id: 42 }, headers: auth_headers, as: :json
 
       expect(response).to have_http_status(:ok)
       body = response.parsed_body
@@ -156,7 +156,7 @@ RSpec.describe "Api::V1::WorkOrders", type: :request do
       vehicle_id = create_vehicle(customer_id)
       wo_id = create_work_order(customer_id, vehicle_id)
 
-      patch "/api/v1/work_orders/#{wo_id}/assign", params: {}, as: :json
+      patch "/api/v1/work_orders/#{wo_id}/assign", params: {}, headers: auth_headers, as: :json
 
       expect(response).to have_http_status(:unprocessable_entity)
     end
@@ -168,11 +168,11 @@ RSpec.describe "Api::V1::WorkOrders", type: :request do
       vehicle_id = create_vehicle(customer_id)
       wo_id = create_work_order(customer_id, vehicle_id)
       service_id = create_service
-      patch "/api/v1/work_orders/#{wo_id}/assign", params: { mechanic_id: 1 }, as: :json
+      patch "/api/v1/work_orders/#{wo_id}/assign", params: { mechanic_id: 1 }, headers: auth_headers, as: :json
 
       post "/api/v1/work_orders/#{wo_id}/line_items",
            params: { item_type: "service", reference_id: service_id, quantity: 1 },
-           as: :json
+           headers: auth_headers, as: :json
 
       expect(response).to have_http_status(:created)
       item = response.parsed_body["line_items"].last
@@ -186,11 +186,11 @@ RSpec.describe "Api::V1::WorkOrders", type: :request do
       vehicle_id = create_vehicle(customer_id)
       wo_id = create_work_order(customer_id, vehicle_id)
       item_id = create_inventory_item
-      patch "/api/v1/work_orders/#{wo_id}/assign", params: { mechanic_id: 1 }, as: :json
+      patch "/api/v1/work_orders/#{wo_id}/assign", params: { mechanic_id: 1 }, headers: auth_headers, as: :json
 
       post "/api/v1/work_orders/#{wo_id}/line_items",
            params: { item_type: "part", reference_id: item_id, quantity: 2 },
-           as: :json
+           headers: auth_headers, as: :json
 
       expect(response).to have_http_status(:created)
       item = response.parsed_body["line_items"].last
@@ -203,14 +203,14 @@ RSpec.describe "Api::V1::WorkOrders", type: :request do
       vehicle_id = create_vehicle(customer_id)
       wo_id = create_work_order(customer_id, vehicle_id)
       service_id = create_service
-      patch "/api/v1/work_orders/#{wo_id}/assign", params: { mechanic_id: 1 }, as: :json
+      patch "/api/v1/work_orders/#{wo_id}/assign", params: { mechanic_id: 1 }, headers: auth_headers, as: :json
 
       post "/api/v1/work_orders/#{wo_id}/line_items",
            params: { item_type: "service", reference_id: service_id, quantity: 1 },
-           as: :json
-      patch "/api/v1/services/#{service_id}", params: { base_price: 9000 }, as: :json
+           headers: auth_headers, as: :json
+      patch "/api/v1/services/#{service_id}", params: { base_price: 9000 }, headers: auth_headers, as: :json
 
-      get "/api/v1/work_orders/#{wo_id}", as: :json
+      get "/api/v1/work_orders/#{wo_id}", headers: auth_headers, as: :json
 
       item = response.parsed_body["line_items"].last
       expect(item["price_snapshot"]).to eq("R$ 50.00")
@@ -224,7 +224,7 @@ RSpec.describe "Api::V1::WorkOrders", type: :request do
 
       post "/api/v1/work_orders/#{wo_id}/line_items",
            params: { item_type: "service", reference_id: service_id, quantity: 1 },
-           as: :json
+           headers: auth_headers, as: :json
 
       expect(response).to have_http_status(:unprocessable_entity)
     end
@@ -236,12 +236,12 @@ RSpec.describe "Api::V1::WorkOrders", type: :request do
       vehicle_id = create_vehicle(customer_id)
       wo_id = create_work_order(customer_id, vehicle_id)
       service_id = create_service
-      patch "/api/v1/work_orders/#{wo_id}/assign", params: { mechanic_id: 1 }, as: :json
+      patch "/api/v1/work_orders/#{wo_id}/assign", params: { mechanic_id: 1 }, headers: auth_headers, as: :json
       post "/api/v1/work_orders/#{wo_id}/line_items",
            params: { item_type: "service", reference_id: service_id, quantity: 1 },
-           as: :json
+           headers: auth_headers, as: :json
 
-      patch "/api/v1/work_orders/#{wo_id}/diagnose", as: :json
+      patch "/api/v1/work_orders/#{wo_id}/diagnose", headers: auth_headers, as: :json
 
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body["status"]).to eq("awaiting_approval")
@@ -251,9 +251,9 @@ RSpec.describe "Api::V1::WorkOrders", type: :request do
       customer_id = create_customer
       vehicle_id = create_vehicle(customer_id)
       wo_id = create_work_order(customer_id, vehicle_id)
-      patch "/api/v1/work_orders/#{wo_id}/assign", params: { mechanic_id: 1 }, as: :json
+      patch "/api/v1/work_orders/#{wo_id}/assign", params: { mechanic_id: 1 }, headers: auth_headers, as: :json
 
-      patch "/api/v1/work_orders/#{wo_id}/diagnose", as: :json
+      patch "/api/v1/work_orders/#{wo_id}/diagnose", headers: auth_headers, as: :json
 
       expect(response).to have_http_status(:unprocessable_entity)
     end
@@ -264,28 +264,28 @@ RSpec.describe "Api::V1::WorkOrders", type: :request do
     vehicle_id = create_vehicle(customer_id)
     wo_id = create_work_order(customer_id, vehicle_id)
     service_id = create_service
-    patch "/api/v1/work_orders/#{wo_id}/assign", params: { mechanic_id: 1 }, as: :json
+    patch "/api/v1/work_orders/#{wo_id}/assign", params: { mechanic_id: 1 }, headers: auth_headers, as: :json
     post "/api/v1/work_orders/#{wo_id}/line_items",
-         params: { item_type: "service", reference_id: service_id, quantity: 1 }, as: :json
-    patch "/api/v1/work_orders/#{wo_id}/diagnose", as: :json
+         params: { item_type: "service", reference_id: service_id, quantity: 1 }, headers: auth_headers, as: :json
+    patch "/api/v1/work_orders/#{wo_id}/diagnose", headers: auth_headers, as: :json
     quote_id = Persistence::Quotes::QuoteRecord.find_by(work_order_id: wo_id).id
-    patch "/api/v1/quotes/#{quote_id}/send_to_customer", as: :json
-    patch "/api/v1/quotes/#{quote_id}/approve", as: :json
+    patch "/api/v1/quotes/#{quote_id}/send_to_customer", headers: auth_headers, as: :json
+    patch "/api/v1/quotes/#{quote_id}/approve", headers: auth_headers, as: :json
     { wo_id: wo_id, vehicle_id: vehicle_id }
   end
 
   describe "GET /api/v1/work_orders/ready_to_execute" do
     def drive_wo_to_approved(customer_id, vehicle_id, service_id)
       post "/api/v1/work_orders",
-           params: { customer_id: customer_id, vehicle_id: vehicle_id, problem_description: "x" }, as: :json
+           params: { customer_id: customer_id, vehicle_id: vehicle_id, problem_description: "x" }, headers: auth_headers, as: :json
       wo_id = response.parsed_body["id"]
-      patch "/api/v1/work_orders/#{wo_id}/assign", params: { mechanic_id: 1 }, as: :json
+      patch "/api/v1/work_orders/#{wo_id}/assign", params: { mechanic_id: 1 }, headers: auth_headers, as: :json
       post "/api/v1/work_orders/#{wo_id}/line_items",
-           params: { item_type: "service", reference_id: service_id, quantity: 1 }, as: :json
-      patch "/api/v1/work_orders/#{wo_id}/diagnose", as: :json
+           params: { item_type: "service", reference_id: service_id, quantity: 1 }, headers: auth_headers, as: :json
+      patch "/api/v1/work_orders/#{wo_id}/diagnose", headers: auth_headers, as: :json
       quote_id = Persistence::Quotes::QuoteRecord.find_by(work_order_id: wo_id).id
-      patch "/api/v1/quotes/#{quote_id}/send_to_customer", as: :json
-      patch "/api/v1/quotes/#{quote_id}/approve", as: :json
+      patch "/api/v1/quotes/#{quote_id}/send_to_customer", headers: auth_headers, as: :json
+      patch "/api/v1/quotes/#{quote_id}/approve", headers: auth_headers, as: :json
       wo_id
     end
 
@@ -299,7 +299,7 @@ RSpec.describe "Api::V1::WorkOrders", type: :request do
       second_id = drive_wo_to_approved(customer_id, vehicle_id, service_id)
       create_work_order(customer_id, vehicle_id) # not approved, should not appear
 
-      get "/api/v1/work_orders/ready_to_execute", as: :json
+      get "/api/v1/work_orders/ready_to_execute", headers: auth_headers, as: :json
 
       expect(response).to have_http_status(:ok)
       body = response.parsed_body
@@ -309,7 +309,7 @@ RSpec.describe "Api::V1::WorkOrders", type: :request do
     end
 
     it "returns an empty array when there are no approved WOs" do
-      get "/api/v1/work_orders/ready_to_execute", as: :json
+      get "/api/v1/work_orders/ready_to_execute", headers: auth_headers, as: :json
 
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body).to eq([])
@@ -320,7 +320,7 @@ RSpec.describe "Api::V1::WorkOrders", type: :request do
     it "transitions approved → in_progress" do
       ids = setup_approved_work_order
 
-      patch "/api/v1/work_orders/#{ids[:wo_id]}/execute", as: :json
+      patch "/api/v1/work_orders/#{ids[:wo_id]}/execute", headers: auth_headers, as: :json
 
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body["status"]).to eq("in_progress")
@@ -331,7 +331,7 @@ RSpec.describe "Api::V1::WorkOrders", type: :request do
       vehicle_id = create_vehicle(customer_id)
       wo_id = create_work_order(customer_id, vehicle_id)
 
-      patch "/api/v1/work_orders/#{wo_id}/execute", as: :json
+      patch "/api/v1/work_orders/#{wo_id}/execute", headers: auth_headers, as: :json
 
       expect(response).to have_http_status(:unprocessable_entity)
     end
@@ -340,35 +340,35 @@ RSpec.describe "Api::V1::WorkOrders", type: :request do
   describe "PATCH /api/v1/work_orders/:id/complete" do
     it "transitions in_progress → completed and updates vehicle mileage" do
       ids = setup_approved_work_order
-      patch "/api/v1/work_orders/#{ids[:wo_id]}/execute", as: :json
+      patch "/api/v1/work_orders/#{ids[:wo_id]}/execute", headers: auth_headers, as: :json
 
-      patch "/api/v1/work_orders/#{ids[:wo_id]}/complete", params: { current_mileage: 55_000 }, as: :json
+      patch "/api/v1/work_orders/#{ids[:wo_id]}/complete", params: { current_mileage: 55_000 }, headers: auth_headers, as: :json
 
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body["status"]).to eq("completed")
 
-      get "/api/v1/vehicles/#{ids[:vehicle_id]}", as: :json
+      get "/api/v1/vehicles/#{ids[:vehicle_id]}", headers: auth_headers, as: :json
       expect(response.parsed_body["mileage"]).to eq(55_000)
     end
 
     it "returns 422 when current_mileage is missing" do
       ids = setup_approved_work_order
-      patch "/api/v1/work_orders/#{ids[:wo_id]}/execute", as: :json
+      patch "/api/v1/work_orders/#{ids[:wo_id]}/execute", headers: auth_headers, as: :json
 
-      patch "/api/v1/work_orders/#{ids[:wo_id]}/complete", params: {}, as: :json
+      patch "/api/v1/work_orders/#{ids[:wo_id]}/complete", params: {}, headers: auth_headers, as: :json
 
       expect(response).to have_http_status(:unprocessable_entity)
     end
 
     it "rolls back when mileage would decrease (vehicle mileage VO rejects)" do
       ids = setup_approved_work_order
-      patch "/api/v1/work_orders/#{ids[:wo_id]}/execute", as: :json
+      patch "/api/v1/work_orders/#{ids[:wo_id]}/execute", headers: auth_headers, as: :json
 
-      patch "/api/v1/work_orders/#{ids[:wo_id]}/complete", params: { current_mileage: 10 }, as: :json
+      patch "/api/v1/work_orders/#{ids[:wo_id]}/complete", params: { current_mileage: 10 }, headers: auth_headers, as: :json
 
       expect(response).to have_http_status(:unprocessable_entity)
 
-      get "/api/v1/work_orders/#{ids[:wo_id]}", as: :json
+      get "/api/v1/work_orders/#{ids[:wo_id]}", headers: auth_headers, as: :json
       expect(response.parsed_body["status"]).to eq("in_progress")
     end
   end
@@ -376,10 +376,10 @@ RSpec.describe "Api::V1::WorkOrders", type: :request do
   describe "PATCH /api/v1/work_orders/:id/deliver" do
     it "transitions completed → delivered" do
       ids = setup_approved_work_order
-      patch "/api/v1/work_orders/#{ids[:wo_id]}/execute", as: :json
-      patch "/api/v1/work_orders/#{ids[:wo_id]}/complete", params: { current_mileage: 55_000 }, as: :json
+      patch "/api/v1/work_orders/#{ids[:wo_id]}/execute", headers: auth_headers, as: :json
+      patch "/api/v1/work_orders/#{ids[:wo_id]}/complete", params: { current_mileage: 55_000 }, headers: auth_headers, as: :json
 
-      patch "/api/v1/work_orders/#{ids[:wo_id]}/deliver", as: :json
+      patch "/api/v1/work_orders/#{ids[:wo_id]}/deliver", headers: auth_headers, as: :json
 
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body["status"]).to eq("delivered")
@@ -387,9 +387,9 @@ RSpec.describe "Api::V1::WorkOrders", type: :request do
 
     it "returns 422 when work order is not completed" do
       ids = setup_approved_work_order
-      patch "/api/v1/work_orders/#{ids[:wo_id]}/execute", as: :json
+      patch "/api/v1/work_orders/#{ids[:wo_id]}/execute", headers: auth_headers, as: :json
 
-      patch "/api/v1/work_orders/#{ids[:wo_id]}/deliver", as: :json
+      patch "/api/v1/work_orders/#{ids[:wo_id]}/deliver", headers: auth_headers, as: :json
 
       expect(response).to have_http_status(:unprocessable_entity)
     end

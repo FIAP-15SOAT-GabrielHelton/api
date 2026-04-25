@@ -2,7 +2,7 @@
 
 module Api
   module V1
-    class CustomersController < ApplicationController
+    class CustomersController < Api::V1::ApplicationController
       def index
         result = list_customers.call
 
