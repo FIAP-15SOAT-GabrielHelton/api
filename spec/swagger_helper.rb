@@ -98,6 +98,7 @@ RSpec.configure do |config|
               updated_at: { type: :string, format: :date_time },
               executed_at: { type: :string, format: :date_time, nullable: true },
               completed_at: { type: :string, format: :date_time, nullable: true },
+              total_execution_time_minutes: { type: :number, nullable: true },
               average_service_duration_minutes: { type: :number, nullable: true }
             },
             required: %w[id protocol customer_id vehicle_id status description]

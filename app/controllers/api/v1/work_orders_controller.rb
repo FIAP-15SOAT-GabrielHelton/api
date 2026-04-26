@@ -224,6 +224,7 @@ module Api
           protocol: work_order.protocol,
           executed_at: work_order.executed_at,
           completed_at: work_order.completed_at,
+          total_execution_time_minutes: work_order.total_execution_time_minutes,
           average_service_duration_minutes: work_order.average_service_duration_minutes,
           created_at: work_order.created_at,
           updated_at: work_order.updated_at

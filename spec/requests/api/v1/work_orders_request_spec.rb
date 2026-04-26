@@ -357,7 +357,7 @@ RSpec.describe "Api::V1::WorkOrders", type: :request do
       body = response.parsed_body
       expect(body["status"]).to eq("completed")
       expect(body["completed_at"]).not_to be_nil
-      expect(body["average_service_duration_minutes"]).not_to be_nil
+      expect(body["total_execution_time_minutes"]).not_to be_nil
     end
 
     it "keeps the work order in_progress while there are pending services" do

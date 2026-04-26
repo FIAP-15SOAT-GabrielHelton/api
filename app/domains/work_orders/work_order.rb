@@ -13,13 +13,13 @@ module WorkOrders
 
     attr_reader :customer_id, :vehicle_id, :problem_description, :status, :mechanic_id,
                 :line_items, :protocol, :created_at, :updated_at, :executed_at, :completed_at,
-                :average_service_duration_minutes
+                :total_execution_time_minutes
 
     def initialize(id:, customer_id:, vehicle_id:, problem_description:,
                    status: :received, mechanic_id: nil, line_items: [],
                    protocol: nil, created_at: nil, updated_at: nil,
                    executed_at: nil, completed_at: nil,
-                   average_service_duration_minutes: nil)
+                   total_execution_time_minutes: nil)
       super(id: id)
       raise ArgumentError, "customer_id is required" if customer_id.nil?
       raise ArgumentError, "vehicle_id is required" if vehicle_id.nil?
@@ -35,7 +35,7 @@ module WorkOrders
       @updated_at = updated_at
       @executed_at = executed_at
       @completed_at = completed_at
-      @average_service_duration_minutes = average_service_duration_minutes
+      @total_execution_time_minutes = total_execution_time_minutes
     end
 
     ValueObjects::WorkOrderStatus::STATES.each do |state|
@@ -85,7 +85,14 @@ module WorkOrders
 
       @status = @status.transition_to(:completed)
       @completed_at = Time.now
-      @average_service_duration_minutes = compute_average_service_duration_minutes
+      @total_execution_time_minutes = compute_total_execution_time_minutes
+    end
+
+    def average_service_duration_minutes
+      durations = service_line_items.map(&:duration_minutes).compact
+      return nil if durations.empty?
+
+      (durations.sum / durations.size).round(2)
     end
 
     def reject
@@ -94,11 +101,11 @@ module WorkOrders
 
     private
 
-    def compute_average_service_duration_minutes
+    def compute_total_execution_time_minutes
       durations = service_line_items.map(&:duration_minutes).compact
       return nil if durations.empty?
 
-      (durations.sum / durations.size).round(2)
+      durations.sum.round(2)
     end
 
     def ensure_status(value)

@@ -44,7 +44,7 @@ RSpec.describe WorkOrders::FinishLineItemService do
 
     expect(result).to be_success
     expect(wo.completed?).to be true
-    expect(wo.average_service_duration_minutes).not_to be_nil
+    expect(wo.total_execution_time_minutes).not_to be_nil
   end
 
   it "keeps the work order in_progress when other services remain pending" do

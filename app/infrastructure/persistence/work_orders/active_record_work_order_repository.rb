@@ -99,7 +99,7 @@ module Persistence
           updated_at: record.updated_at,
           executed_at: record.executed_at,
           completed_at: record.completed_at,
-          average_service_duration_minutes: record.average_service_duration_minutes&.to_f
+          total_execution_time_minutes: record.total_execution_time_minutes&.to_f
         )
       end
 
@@ -126,7 +126,7 @@ module Persistence
           protocol: work_order.protocol,
           executed_at: work_order.executed_at,
           completed_at: work_order.completed_at,
-          average_service_duration_minutes: work_order.average_service_duration_minutes
+          total_execution_time_minutes: work_order.total_execution_time_minutes
         }
       end
 

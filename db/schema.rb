@@ -121,7 +121,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_27_100000) do
   end
 
   create_table "work_orders", force: :cascade do |t|
-    t.decimal "average_service_duration_minutes", precision: 8, scale: 2
     t.datetime "completed_at"
     t.datetime "created_at", null: false
     t.bigint "customer_id", null: false
@@ -130,6 +129,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_27_100000) do
     t.text "problem_description", null: false
     t.string "protocol", null: false
     t.string "status", default: "received", null: false
+    t.decimal "total_execution_time_minutes", precision: 8, scale: 2
     t.datetime "updated_at", null: false
     t.bigint "vehicle_id", null: false
     t.index ["completed_at"], name: "index_work_orders_on_completed_at"

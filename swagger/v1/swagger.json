@@ -225,6 +225,10 @@
             "format": "date_time",
             "nullable": true
           },
+          "total_execution_time_minutes": {
+            "type": "number",
+            "nullable": true
+          },
           "average_service_duration_minutes": {
             "type": "number",
             "nullable": true

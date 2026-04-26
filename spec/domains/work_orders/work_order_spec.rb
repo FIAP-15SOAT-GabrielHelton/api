@@ -221,6 +221,7 @@ describe WorkOrders::WorkOrder do
       wo.complete
 
       expect(wo.completed?).to be true
+      expect(wo.total_execution_time_minutes).to be_within(0.1).of(10.0)
       expect(wo.average_service_duration_minutes).to be_within(0.1).of(10.0)
     end
 
