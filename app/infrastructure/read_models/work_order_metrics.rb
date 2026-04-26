@@ -5,15 +5,15 @@ module ReadModels
   # Lives in infrastructure because it queries Active Record directly,
   # bypassing aggregates — a deliberate CQRS-lite split for reporting.
   class WorkOrderMetrics
-    def average_execution_time_minutes
+    def average_service_duration_minutes
       seconds = service_scope.average("EXTRACT(EPOCH FROM (finished_at - started_at))")
       return nil unless seconds
 
       (seconds / 60.0).round(2)
     end
 
-    def completed_count
-      Persistence::WorkOrders::WorkOrderRecord.where(status: "completed").count
+    def completed_services_count
+      service_scope.count
     end
 
     private
