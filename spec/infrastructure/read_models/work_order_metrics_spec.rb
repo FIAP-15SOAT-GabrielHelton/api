@@ -35,9 +35,9 @@ RSpec.describe ReadModels::WorkOrderMetrics do
     )
   end
 
-  it "returns nil average and zero count when there are no finished services" do
-    expect(metrics.average_service_duration_minutes).to be_nil
-    expect(metrics.completed_services_count).to eq(0)
+  it "returns zero total and count when there are no finished services" do
+    expect(metrics.total_execution_time_minutes).to eq(0.0)
+    expect(metrics.completed_work_orders_count).to eq(0)
   end
 
   it "ignores services that have not started or finished" do
@@ -48,21 +48,22 @@ RSpec.describe ReadModels::WorkOrderMetrics do
       price_snapshot_cents: 5_000, quantity: 1
     )
 
-    expect(metrics.average_service_duration_minutes).to be_nil
-    expect(metrics.completed_services_count).to eq(0)
+    expect(metrics.total_execution_time_minutes).to eq(0.0)
+    expect(metrics.completed_work_orders_count).to eq(1)
   end
 
-  it "computes the average duration of finished services across the system" do
+  it "sums service durations across all completed work orders" do
     wo1 = create_completed_wo
     wo2 = create_completed_wo
-    add_finished_service(wo1, duration_minutes: 90)
-    add_finished_service(wo2, duration_minutes: 30)
+    add_finished_service(wo1, duration_minutes: 30)
+    add_finished_service(wo1, duration_minutes: 45)
+    add_finished_service(wo2, duration_minutes: 60)
 
-    expect(metrics.average_service_duration_minutes).to be_within(0.5).of(60.0)
-    expect(metrics.completed_services_count).to eq(2)
+    expect(metrics.total_execution_time_minutes).to be_within(0.5).of(135.0)
+    expect(metrics.completed_work_orders_count).to eq(2)
   end
 
-  it "ignores parts when computing the average and the count" do
+  it "ignores parts when summing the total" do
     wo = create_completed_wo
     add_finished_service(wo, duration_minutes: 60)
     Persistence::WorkOrders::LineItemRecord.create!(
@@ -71,7 +72,7 @@ RSpec.describe ReadModels::WorkOrderMetrics do
       price_snapshot_cents: 1_000, quantity: 2
     )
 
-    expect(metrics.average_service_duration_minutes).to be_within(0.5).of(60.0)
-    expect(metrics.completed_services_count).to eq(1)
+    expect(metrics.total_execution_time_minutes).to be_within(0.5).of(60.0)
+    expect(metrics.completed_work_orders_count).to eq(1)
   end
 end

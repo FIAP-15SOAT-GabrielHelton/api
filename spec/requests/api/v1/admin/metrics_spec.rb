@@ -12,8 +12,8 @@ RSpec.describe 'Api::V1::Admin::Metrics', openapi_spec: 'v1/swagger.json', type:
       response '200', 'successful' do
         schema type: :object,
                properties: {
-                 average_service_duration_minutes: { type: :number, nullable: true },
-                 completed_services_count: { type: :integer }
+                 total_execution_time_minutes: { type: :number },
+                 completed_work_orders_count: { type: :integer }
                }
         run_test!
       end
