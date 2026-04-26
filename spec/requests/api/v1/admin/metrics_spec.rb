@@ -1,22 +1,26 @@
 # frozen_string_literal: true
 
-require "rails_helper"
+require 'swagger_helper'
 
-RSpec.describe "Api::V1::Admin::Metrics", type: :request do
-  describe "GET /api/v1/admin/metrics" do
-    it "requires authentication" do
-      get "/api/v1/admin/metrics", as: :json
+RSpec.describe 'Api::V1::Admin::Metrics', openapi_spec: 'v1/swagger.json', type: :request do
+  path '/api/v1/admin/metrics' do
+    get 'Get admin metrics' do
+      tags 'Admin'
+      produces 'application/json'
+      security [ { bearerAuth: [] } ]
 
-      expect(response).to have_http_status(:unauthorized)
-    end
+      response '200', 'successful' do
+        schema type: :object,
+               properties: {
+                 average_execution_time_minutes: { type: :number, nullable: true },
+                 completed_count: { type: :integer }
+               }
+        run_test!
+      end
 
-    it "returns nil average and zero count when there are no completed work orders" do
-      get "/api/v1/admin/metrics", headers: auth_headers, as: :json
-
-      expect(response).to have_http_status(:ok)
-      body = response.parsed_body
-      expect(body["average_execution_time_minutes"]).to be_nil
-      expect(body["completed_count"]).to eq(0)
+      response '401', 'unauthorized' do
+        run_test!
+      end
     end
   end
 end

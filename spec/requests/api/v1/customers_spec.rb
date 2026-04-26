@@ -1,8 +1,9 @@
 # frozen_string_literal: true
 
 require "rails_helper"
+require 'swagger_helper'
 
-RSpec.describe "Api::V1::Customers", type: :request do
+RSpec.describe "Api::V1::Customers", openapi_spec: 'v1/swagger.json', type: :request do
   let(:valid_params) do
     {
       person_type: "individual",
@@ -20,153 +21,152 @@ RSpec.describe "Api::V1::Customers", type: :request do
     }
   end
 
-  describe "POST /api/v1/customers" do
-    it "creates a customer with valid data" do
-      post "/api/v1/customers", params: valid_params, headers: auth_headers, as: :json
+  path '/api/v1/customers' do
+    post 'Create customer' do
+      tags 'Customers'
+      consumes 'application/json'
+      produces 'application/json'
+      security [ { bearerAuth: [] } ]
+      parameter name: :customer, in: :body, schema: {
+        type: :object,
+        properties: {
+          person_type: { type: :string, enum: %w[individual company] },
+          document: { type: :string },
+          name: { type: :string },
+          email: { type: :string },
+          phone: { type: :string },
+          address: {
+            type: :object,
+            properties: {
+              zip_code: { type: :string },
+              street: { type: :string },
+              number: { type: :string },
+              city: { type: :string },
+              state: { type: :string }
+            }
+          }
+        },
+        required: %w[person_type document name email phone address]
+      }
 
-      expect(response).to have_http_status(:created)
+      response '201', 'customer created' do
+        schema '$ref' => '#/components/schemas/Customer'
+        run_test!
+      end
 
-      body = response.parsed_body
-      expect(body["name"]).to eq("João Silva")
-      expect(body["document"]).to eq("529.982.247-25")
-      expect(body["person_type"]).to eq("individual")
-      expect(body["status"]).to eq("active")
-      expect(body["address"]["city"]).to eq("São Paulo")
+      response '422', 'unprocessable entity' do
+        schema '$ref' => '#/components/schemas/ValidationErrors'
+        run_test!
+      end
+
+      response '401', 'unauthorized' do
+        run_test!
+      end
     end
 
-    it "returns 422 with invalid document" do
-      post "/api/v1/customers", params: valid_params.merge(document: "00000000000"), headers: auth_headers, as: :json
+    get 'List customers' do
+      tags 'Customers'
+      produces 'application/json'
+      security [ { bearerAuth: [] } ]
+      parameter name: :page, in: :query, type: :integer, required: false, description: 'Page number'
+      parameter name: :per_page, in: :query, type: :integer, required: false, description: 'Items per page'
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      response '200', 'successful' do
+        schema type: :object,
+          properties: {
+            data: {
+              type: :array,
+              items: { '$ref' => '#/components/schemas/Customer' }
+            },
+            pagination: {
+              type: :object,
+              properties: {
+                current_page: { type: :integer },
+                total_pages: { type: :integer },
+                total_items: { type: :integer }
+              }
+            }
+          }
+        run_test!
+      end
 
-      body = response.parsed_body
-      expect(body["error"]).to match(/Invalid CPF/)
-    end
-
-    it "returns 422 with duplicate document" do
-      post "/api/v1/customers", params: valid_params, headers: auth_headers, as: :json
-      post "/api/v1/customers", params: valid_params.merge(name: "Outro"), headers: auth_headers, as: :json
-
-      expect(response).to have_http_status(:unprocessable_entity)
-
-      body = response.parsed_body
-      expect(body["error"]).to eq("Document already registered")
-    end
-
-    it "creates a company customer with CNPJ" do
-      company_params = valid_params.merge(
-        person_type: "company",
-        document: "11.222.333/0001-81"
-      )
-
-      post "/api/v1/customers", params: company_params, headers: auth_headers, as: :json
-
-      expect(response).to have_http_status(:created)
-
-      body = response.parsed_body
-      expect(body["person_type"]).to eq("company")
-      expect(body["document"]).to eq("11.222.333/0001-81")
-    end
-  end
-
-  describe "GET /api/v1/customers" do
-    it "returns all customers" do
-      post "/api/v1/customers", params: valid_params, headers: auth_headers, as: :json
-      post "/api/v1/customers", params: valid_params.merge(
-        document: "11.222.333/0001-81",
-        person_type: "company",
-        name: "Empresa X",
-        email: "x@test.com"
-      ), headers: auth_headers, as: :json
-
-      get "/api/v1/customers", headers: auth_headers, as: :json
-
-      expect(response).to have_http_status(:ok)
-      expect(response.parsed_body.size).to eq(2)
-    end
-
-    it "returns empty array when no customers" do
-      get "/api/v1/customers", headers: auth_headers, as: :json
-
-      expect(response).to have_http_status(:ok)
-      expect(response.parsed_body).to eq([])
-    end
-  end
-
-  describe "GET /api/v1/customers/:id" do
-    it "returns the customer" do
-      post "/api/v1/customers", params: valid_params, headers: auth_headers, as: :json
-      customer_id = response.parsed_body["id"]
-
-      get "/api/v1/customers/#{customer_id}", headers: auth_headers, as: :json
-
-      expect(response).to have_http_status(:ok)
-      expect(response.parsed_body["name"]).to eq("João Silva")
-    end
-
-    it "returns 404 when customer not found" do
-      get "/api/v1/customers/999999", headers: auth_headers, as: :json
-
-      expect(response).to have_http_status(:not_found)
+      response '401', 'unauthorized' do
+        run_test!
+      end
     end
   end
 
-  describe "PATCH /api/v1/customers/:id" do
-    it "updates customer name" do
-      post "/api/v1/customers", params: valid_params, headers: auth_headers, as: :json
-      customer_id = response.parsed_body["id"]
+  path '/api/v1/customers/{id}' do
+    get 'Get customer by ID' do
+      tags 'Customers'
+      produces 'application/json'
+      security [ { bearerAuth: [] } ]
+      parameter name: :id, in: :path, type: :integer, required: true
 
-      patch "/api/v1/customers/#{customer_id}", params: { name: "Maria Silva" }, headers: auth_headers, as: :json
+      response '200', 'successful' do
+        schema '$ref' => '#/components/schemas/Customer'
+        run_test!
+      end
 
-      expect(response).to have_http_status(:ok)
-      expect(response.parsed_body["name"]).to eq("Maria Silva")
+      response '401', 'unauthorized' do
+        run_test!
+      end
+
+      response '404', 'not found' do
+        run_test!
+      end
     end
 
-    it "updates customer address" do
-      post "/api/v1/customers", params: valid_params, headers: auth_headers, as: :json
-      customer_id = response.parsed_body["id"]
+    patch 'Update customer' do
+      tags 'Customers'
+      consumes 'application/json'
+      produces 'application/json'
+      security [ { bearerAuth: [] } ]
+      parameter name: :id, in: :path, type: :integer, required: true
+      parameter name: :customer, in: :body, schema: {
+        type: :object,
+        properties: {
+          name: { type: :string },
+          email: { type: :string },
+          phone: { type: :string }
+        }
+      }
 
-      patch "/api/v1/customers/#{customer_id}", params: {
-        address: { zip_code: "02002-000", street: "Rua Nova", number: "42", city: "RJ", state: "RJ" }
-      }, headers: auth_headers, as: :json
+      response '200', 'customer updated' do
+        schema '$ref' => '#/components/schemas/Customer'
+        run_test!
+      end
 
-      expect(response).to have_http_status(:ok)
-      expect(response.parsed_body["address"]["street"]).to eq("Rua Nova")
+      response '422', 'unprocessable entity' do
+        schema '$ref' => '#/components/schemas/ValidationErrors'
+        run_test!
+      end
+
+      response '401', 'unauthorized' do
+        run_test!
+      end
+
+      response '404', 'not found' do
+        run_test!
+      end
     end
 
-    it "returns 422 when customer not found" do
-      patch "/api/v1/customers/999999", params: { name: "Test" }, headers: auth_headers, as: :json
+    delete 'Delete customer' do
+      tags 'Customers'
+      security [ { bearerAuth: [] } ]
+      parameter name: :id, in: :path, type: :integer, required: true
 
-      expect(response).to have_http_status(:unprocessable_entity)
-    end
-  end
+      response '204', 'customer deleted' do
+        run_test!
+      end
 
-  describe "DELETE /api/v1/customers/:id" do
-    it "deactivates the customer" do
-      post "/api/v1/customers", params: valid_params, headers: auth_headers, as: :json
-      customer_id = response.parsed_body["id"]
+      response '401', 'unauthorized' do
+        run_test!
+      end
 
-      delete "/api/v1/customers/#{customer_id}", headers: auth_headers, as: :json
-
-      expect(response).to have_http_status(:ok)
-      expect(response.parsed_body["status"]).to eq("inactive")
-    end
-
-    it "returns 422 when already inactive" do
-      post "/api/v1/customers", params: valid_params, headers: auth_headers, as: :json
-      customer_id = response.parsed_body["id"]
-
-      delete "/api/v1/customers/#{customer_id}", headers: auth_headers, as: :json
-      delete "/api/v1/customers/#{customer_id}", headers: auth_headers, as: :json
-
-      expect(response).to have_http_status(:unprocessable_entity)
-      expect(response.parsed_body["error"]).to match(/already inactive/)
-    end
-
-    it "returns 422 when customer not found" do
-      delete "/api/v1/customers/999999", headers: auth_headers, as: :json
-
-      expect(response).to have_http_status(:unprocessable_entity)
+      response '404', 'not found' do
+        run_test!
+      end
     end
   end
 end

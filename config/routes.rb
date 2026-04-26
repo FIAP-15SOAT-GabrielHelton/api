@@ -59,4 +59,7 @@ Rails.application.routes.draw do
       get "tracking/:protocol", to: "tracking#show", as: :tracking
     end
   end
+
+  mount Rswag::Ui::Engine => "/api-docs"
+  mount Rswag::Api::Engine => "/api-docs"
 end

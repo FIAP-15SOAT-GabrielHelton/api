@@ -49,6 +49,11 @@ group :development, :test do
   gem "rubocop-rails-omakase", require: false
   gem "rubocop-rspec", require: false
 
+  # API documentation [https://github.com/rswag/rswag]
+  gem "rswag-specs"
+  gem "rswag-api"
+  gem "rswag-ui"
+
   # Testing framework and helpers
   gem "rspec-rails", "~> 8.0"
   gem "factory_bot_rails"

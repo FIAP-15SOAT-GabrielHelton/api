@@ -16,6 +16,7 @@ AllCops:
     - "tmp/**/*"
     - "log/**/*"
     - "storage/**/*"
+    - ".githooks/**/*"
 
 Layout/LineLength:
   Max: 120
@@ -46,6 +47,11 @@ Metrics/BlockLength:
     - "db/migrate/**/*"
     - "spec/**/*"
     - "config/**/*"
+
+# rswag uses run_test! which generates examples dynamically — the cop cannot see them
+RSpec/EmptyExampleGroup:
+  Exclude:
+    - "spec/requests/**/*"
 
 RSpec/ExampleLength:
   Max: 15

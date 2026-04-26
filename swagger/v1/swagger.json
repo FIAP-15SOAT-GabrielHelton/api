@@ -1,0 +1,326 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "API V1",
+    "version": "v1"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Customer": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "document": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date_time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date_time"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "document",
+          "email",
+          "phone"
+        ]
+      },
+      "Vehicle": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "customer_id": {
+            "type": "integer"
+          },
+          "license_plate": {
+            "type": "string"
+          },
+          "make": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "year": {
+            "type": "integer"
+          },
+          "color": {
+            "type": "string"
+          },
+          "mileage": {
+            "type": "integer"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "inactive"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date_time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date_time"
+          }
+        },
+        "required": [
+          "id",
+          "customer_id",
+          "license_plate",
+          "make",
+          "model",
+          "year",
+          "mileage"
+        ]
+      },
+      "Service": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "base_price": {
+            "type": "string"
+          },
+          "estimated_duration_minutes": {
+            "type": "integer"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date_time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date_time"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "base_price",
+          "active"
+        ]
+      },
+      "InventoryItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "integer"
+          },
+          "minimum_quantity": {
+            "type": "integer"
+          },
+          "unit_price": {
+            "type": "string"
+          },
+          "below_minimum": {
+            "type": "boolean"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date_time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date_time"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "code",
+          "quantity",
+          "unit_price",
+          "active"
+        ]
+      },
+      "WorkOrder": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "protocol": {
+            "type": "string"
+          },
+          "customer_id": {
+            "type": "integer"
+          },
+          "vehicle_id": {
+            "type": "integer"
+          },
+          "mechanic_id": {
+            "type": "integer",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "received",
+              "diagnosing",
+              "awaiting_approval",
+              "approved",
+              "executing",
+              "completed",
+              "delivered",
+              "rejected"
+            ]
+          },
+          "description": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date_time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date_time"
+          },
+          "executed_at": {
+            "type": "string",
+            "format": "date_time",
+            "nullable": true
+          },
+          "completed_at": {
+            "type": "string",
+            "format": "date_time",
+            "nullable": true
+          },
+          "delivered_at": {
+            "type": "string",
+            "format": "date_time",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "protocol",
+          "customer_id",
+          "vehicle_id",
+          "status",
+          "description"
+        ]
+      },
+      "Quote": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "work_order_id": {
+            "type": "integer"
+          },
+          "total_price": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "created",
+              "sent",
+              "approved",
+              "rejected"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date_time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date_time"
+          }
+        },
+        "required": [
+          "id",
+          "work_order_id",
+          "total_price",
+          "status"
+        ]
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "ValidationErrors": {
+        "type": "object",
+        "properties": {
+          "errors": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "required": [
+          "errors"
+        ]
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ]
+}

@@ -256,6 +256,45 @@ Mais tarde, quando o mecânico diagnostica a OS:
 
 O domínio permanece puro: `OrdemDeServico#diagnosticar` não sabe que orçamento existe. A orquestração cross-context vive exclusivamente na Application Layer (Evans, cap. 4).
 
+## Swagger / Documentação da API
+
+A documentação interativa da API é gerada automaticamente pelo [rswag](https://github.com/rswag/rswag) a partir dos request specs.
+
+### Acessando a UI
+
+Com a aplicação rodando, acesse:
+
+```
+http://localhost:3000/api-docs
+```
+
+O arquivo gerado fica em `swagger/v1/swagger.json` e é versionado no repositório.
+
+### Regenerando a documentação
+
+Sempre que um request spec for alterado, regenere o arquivo:
+
+```bash
+docker compose exec web bundle exec rake rswag:specs:swaggerize
+```
+
+### Manter em sincronia automaticamente
+
+Dois mecanismos garantem que `swagger/v1/swagger.json` nunca fique desatualizado:
+
+- **Pre-commit hook** (`.githooks/pre-commit`): antes de cada commit, verifica se algum arquivo em `spec/requests/` ou `spec/swagger_helper.rb` foi alterado. Se sim, regenera o JSON e inclui a atualização no mesmo commit.
+- **Claude Code hook** (`.claude/settings.json`): dentro de uma sessão do Claude Code, regenera o JSON automaticamente sempre que Claude edita um request spec.
+
+O hook de git requer uma configuração local feita pelo `bin/setup`:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+### Adicionando documentação para novos endpoints
+
+Os specs que geram o Swagger ficam em `spec/requests/api/v1/`. Siga o padrão do arquivo `customers_spec.rb` como referência: use o DSL `path`/`get`/`post`/`response` do rswag em um `RSpec.describe` com a tag `swagger_doc: 'v1/swagger.json'` e `require 'swagger_helper'`.
+
 ## Testes
 
 Usamos **RSpec** com `factory_bot_rails`, `faker` e `shoulda-matchers`. A estrutura de `spec/` espelha `app/`:

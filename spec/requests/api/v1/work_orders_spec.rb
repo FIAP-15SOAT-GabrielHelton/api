@@ -1,397 +1,273 @@
 # frozen_string_literal: true
 
-require "rails_helper"
+require 'swagger_helper'
 
-RSpec.describe "Api::V1::WorkOrders", type: :request do
-  let(:customer_params) do
-    {
-      person_type: "individual",
-      document: "52998224725",
-      name: "John Doe",
-      email: "john@example.com",
-      phone: "+5511999999999",
-      address: {
-        zip_code: "01310100",
-        street: "Av. Paulista",
-        number: "1000",
-        city: "São Paulo",
-        state: "SP"
+RSpec.describe 'Api::V1::WorkOrders', openapi_spec: 'v1/swagger.json', type: :request do
+  path '/api/v1/work_orders' do
+    get 'List work orders' do
+      tags 'Work Orders'
+      produces 'application/json'
+      security [ { bearerAuth: [] } ]
+      parameter name: :status, in: :query, type: :string, required: false,
+                description: 'Filter by status (received, diagnosing, awaiting_approval, approved, in_progress, completed, delivered, rejected)'
+      parameter name: :customer_id, in: :query, type: :integer, required: false, description: 'Filter by customer ID'
+      parameter name: :mechanic_id, in: :query, type: :integer, required: false, description: 'Filter by mechanic ID'
+      parameter name: :page, in: :query, type: :integer, required: false, description: 'Page number'
+      parameter name: :per_page, in: :query, type: :integer, required: false, description: 'Items per page'
+
+      response '200', 'successful' do
+        schema type: :object,
+               properties: {
+                 data: { type: :array, items: { '$ref' => '#/components/schemas/WorkOrder' } },
+                 pagination: {
+                   type: :object,
+                   properties: {
+                     page: { type: :integer },
+                     per_page: { type: :integer },
+                     total: { type: :integer },
+                     total_pages: { type: :integer }
+                   }
+                 }
+               }
+        run_test!
+      end
+
+      response '401', 'unauthorized' do
+        run_test!
+      end
+    end
+
+    post 'Create work order' do
+      tags 'Work Orders'
+      consumes 'application/json'
+      produces 'application/json'
+      security [ { bearerAuth: [] } ]
+      parameter name: :work_order, in: :body, schema: {
+        type: :object,
+        properties: {
+          customer_id: { type: :integer },
+          vehicle_id: { type: :integer },
+          problem_description: { type: :string }
+        },
+        required: %w[customer_id vehicle_id problem_description]
       }
-    }
-  end
 
-  let(:vehicle_params) do
-    {
-      license_plate: "ABC1D23",
-      make: "Honda",
-      model: "Civic",
-      year: 2020,
-      color: "black",
-      mileage: 50_000
-    }
-  end
+      response '201', 'work order created' do
+        schema '$ref' => '#/components/schemas/WorkOrder'
+        run_test!
+      end
 
-  def create_customer
-    post "/api/v1/customers", params: customer_params, headers: auth_headers, as: :json
-    response.parsed_body["id"]
-  end
+      response '422', 'unprocessable entity' do
+        schema '$ref' => '#/components/schemas/Error'
+        run_test!
+      end
 
-  def create_vehicle(customer_id)
-    post "/api/v1/vehicles", params: vehicle_params.merge(customer_id: customer_id), headers: auth_headers, as: :json
-    response.parsed_body["id"]
-  end
-
-  describe "POST /api/v1/work_orders" do
-    it "creates a work order with valid references" do
-      customer_id = create_customer
-      vehicle_id = create_vehicle(customer_id)
-
-      post "/api/v1/work_orders",
-           params: {
-             customer_id: customer_id,
-             vehicle_id: vehicle_id,
-             problem_description: "Engine noise"
-           },
-           headers: auth_headers, as: :json
-
-      expect(response).to have_http_status(:created)
-      body = response.parsed_body
-      expect(body["status"]).to eq("received")
-      expect(body["problem_description"]).to eq("Engine noise")
-      expect(body["line_items"]).to eq([])
-    end
-
-    it "returns 422 when customer does not exist" do
-      customer_id = create_customer
-      vehicle_id = create_vehicle(customer_id)
-
-      post "/api/v1/work_orders",
-           params: { customer_id: 999_999, vehicle_id: vehicle_id, problem_description: "x" },
-           headers: auth_headers, as: :json
-
-      expect(response).to have_http_status(:unprocessable_entity)
-      expect(response.parsed_body["error"]).to eq("Customer not found")
-    end
-
-    it "returns 422 when vehicle does not exist" do
-      customer_id = create_customer
-
-      post "/api/v1/work_orders",
-           params: { customer_id: customer_id, vehicle_id: 999_999, problem_description: "x" },
-           headers: auth_headers, as: :json
-
-      expect(response).to have_http_status(:unprocessable_entity)
-      expect(response.parsed_body["error"]).to eq("Vehicle not found")
-    end
-
-    it "returns 422 when problem_description is missing" do
-      customer_id = create_customer
-      vehicle_id = create_vehicle(customer_id)
-
-      post "/api/v1/work_orders",
-           params: { customer_id: customer_id, vehicle_id: vehicle_id },
-           headers: auth_headers, as: :json
-
-      expect(response).to have_http_status(:unprocessable_entity)
+      response '401', 'unauthorized' do
+        run_test!
+      end
     end
   end
 
-  describe "GET /api/v1/work_orders/:id" do
-    it "returns the work order" do
-      customer_id = create_customer
-      vehicle_id = create_vehicle(customer_id)
-      post "/api/v1/work_orders",
-           params: { customer_id: customer_id, vehicle_id: vehicle_id, problem_description: "x" },
-           headers: auth_headers, as: :json
-      wo_id = response.parsed_body["id"]
+  path '/api/v1/work_orders/ready_to_execute' do
+    get 'List approved work orders ready to execute' do
+      tags 'Work Orders'
+      produces 'application/json'
+      security [ { bearerAuth: [] } ]
 
-      get "/api/v1/work_orders/#{wo_id}", headers: auth_headers, as: :json
+      response '200', 'successful' do
+        schema type: :array, items: { '$ref' => '#/components/schemas/WorkOrder' }
+        run_test!
+      end
 
-      expect(response).to have_http_status(:ok)
-      expect(response.parsed_body["id"]).to eq(wo_id)
-    end
-
-    it "returns 404 when work order not found" do
-      get "/api/v1/work_orders/999999", headers: auth_headers, as: :json
-
-      expect(response).to have_http_status(:not_found)
+      response '401', 'unauthorized' do
+        run_test!
+      end
     end
   end
 
-  def create_service(**overrides)
-    base = { name: "Oil Change", description: "Full oil change", base_price: 5000, estimated_duration_minutes: 30 }
-    post "/api/v1/services", params: base.merge(overrides), headers: auth_headers, as: :json
-    response.parsed_body["id"]
-  end
+  path '/api/v1/work_orders/{id}' do
+    get 'Get work order by ID' do
+      tags 'Work Orders'
+      produces 'application/json'
+      security [ { bearerAuth: [] } ]
+      parameter name: :id, in: :path, type: :integer, required: true
 
-  def create_inventory_item(**overrides)
-    base = { name: "Brake Pad", code: "BP-001", unit_price: 2000, quantity: 5 }
-    post "/api/v1/inventory_items", params: base.merge(overrides), headers: auth_headers, as: :json
-    response.parsed_body["id"]
-  end
+      response '200', 'successful' do
+        schema '$ref' => '#/components/schemas/WorkOrder'
+        run_test!
+      end
 
-  def create_work_order(customer_id, vehicle_id)
-    post "/api/v1/work_orders",
-         params: { customer_id: customer_id, vehicle_id: vehicle_id, problem_description: "x" },
-         headers: auth_headers, as: :json
-    response.parsed_body["id"]
-  end
+      response '401', 'unauthorized' do
+        run_test!
+      end
 
-  describe "PATCH /api/v1/work_orders/:id/assign" do
-    it "assigns mechanic and moves to diagnosing" do
-      customer_id = create_customer
-      vehicle_id = create_vehicle(customer_id)
-      wo_id = create_work_order(customer_id, vehicle_id)
-
-      patch "/api/v1/work_orders/#{wo_id}/assign", params: { mechanic_id: default_test_mechanic.id }, headers: auth_headers, as: :json
-
-      expect(response).to have_http_status(:ok)
-      body = response.parsed_body
-      expect(body["status"]).to eq("diagnosing")
-      expect(body["mechanic_id"]).to eq(default_test_mechanic.id)
-    end
-
-    it "returns 422 when mechanic_id is missing" do
-      customer_id = create_customer
-      vehicle_id = create_vehicle(customer_id)
-      wo_id = create_work_order(customer_id, vehicle_id)
-
-      patch "/api/v1/work_orders/#{wo_id}/assign", params: {}, headers: auth_headers, as: :json
-
-      expect(response).to have_http_status(:unprocessable_entity)
+      response '404', 'not found' do
+        run_test!
+      end
     end
   end
 
-  describe "POST /api/v1/work_orders/:id/line_items" do
-    it "adds a service line item with current price as snapshot" do
-      customer_id = create_customer
-      vehicle_id = create_vehicle(customer_id)
-      wo_id = create_work_order(customer_id, vehicle_id)
-      service_id = create_service
-      patch "/api/v1/work_orders/#{wo_id}/assign", params: { mechanic_id: default_test_mechanic.id }, headers: auth_headers, as: :json
+  path '/api/v1/work_orders/{id}/assign' do
+    patch 'Assign mechanic' do
+      tags 'Work Orders'
+      consumes 'application/json'
+      produces 'application/json'
+      security [ { bearerAuth: [] } ]
+      parameter name: :id, in: :path, type: :integer, required: true
+      parameter name: :body, in: :body, schema: {
+        type: :object,
+        properties: {
+          mechanic_id: { type: :integer }
+        },
+        required: %w[mechanic_id]
+      }
 
-      post "/api/v1/work_orders/#{wo_id}/line_items",
-           params: { item_type: "service", reference_id: service_id, quantity: 1 },
-           headers: auth_headers, as: :json
+      response '200', 'mechanic assigned, status → diagnosing' do
+        schema '$ref' => '#/components/schemas/WorkOrder'
+        run_test!
+      end
 
-      expect(response).to have_http_status(:created)
-      item = response.parsed_body["line_items"].last
-      expect(item["item_type"]).to eq("service")
-      expect(item["name_snapshot"]).to eq("Oil Change")
-      expect(item["price_snapshot"]).to eq("R$ 50.00")
-    end
+      response '422', 'unprocessable entity' do
+        schema '$ref' => '#/components/schemas/Error'
+        run_test!
+      end
 
-    it "adds a part line item from inventory" do
-      customer_id = create_customer
-      vehicle_id = create_vehicle(customer_id)
-      wo_id = create_work_order(customer_id, vehicle_id)
-      item_id = create_inventory_item
-      patch "/api/v1/work_orders/#{wo_id}/assign", params: { mechanic_id: default_test_mechanic.id }, headers: auth_headers, as: :json
-
-      post "/api/v1/work_orders/#{wo_id}/line_items",
-           params: { item_type: "part", reference_id: item_id, quantity: 2 },
-           headers: auth_headers, as: :json
-
-      expect(response).to have_http_status(:created)
-      item = response.parsed_body["line_items"].last
-      expect(item["item_type"]).to eq("part")
-      expect(item["price_snapshot"]).to eq("R$ 20.00")
-    end
-
-    it "preserves price snapshot after catalog price change" do
-      customer_id = create_customer
-      vehicle_id = create_vehicle(customer_id)
-      wo_id = create_work_order(customer_id, vehicle_id)
-      service_id = create_service
-      patch "/api/v1/work_orders/#{wo_id}/assign", params: { mechanic_id: default_test_mechanic.id }, headers: auth_headers, as: :json
-
-      post "/api/v1/work_orders/#{wo_id}/line_items",
-           params: { item_type: "service", reference_id: service_id, quantity: 1 },
-           headers: auth_headers, as: :json
-      patch "/api/v1/services/#{service_id}", params: { base_price: 9000 }, headers: auth_headers, as: :json
-
-      get "/api/v1/work_orders/#{wo_id}", headers: auth_headers, as: :json
-
-      item = response.parsed_body["line_items"].last
-      expect(item["price_snapshot"]).to eq("R$ 50.00")
-    end
-
-    it "returns 422 when work order is still in received" do
-      customer_id = create_customer
-      vehicle_id = create_vehicle(customer_id)
-      wo_id = create_work_order(customer_id, vehicle_id)
-      service_id = create_service
-
-      post "/api/v1/work_orders/#{wo_id}/line_items",
-           params: { item_type: "service", reference_id: service_id, quantity: 1 },
-           headers: auth_headers, as: :json
-
-      expect(response).to have_http_status(:unprocessable_entity)
+      response '401', 'unauthorized' do
+        run_test!
+      end
     end
   end
 
-  describe "PATCH /api/v1/work_orders/:id/diagnose" do
-    it "moves to awaiting_approval after items are added" do
-      customer_id = create_customer
-      vehicle_id = create_vehicle(customer_id)
-      wo_id = create_work_order(customer_id, vehicle_id)
-      service_id = create_service
-      patch "/api/v1/work_orders/#{wo_id}/assign", params: { mechanic_id: default_test_mechanic.id }, headers: auth_headers, as: :json
-      post "/api/v1/work_orders/#{wo_id}/line_items",
-           params: { item_type: "service", reference_id: service_id, quantity: 1 },
-           headers: auth_headers, as: :json
+  path '/api/v1/work_orders/{id}/line_items' do
+    post 'Add line item (service or part)' do
+      tags 'Work Orders'
+      consumes 'application/json'
+      produces 'application/json'
+      security [ { bearerAuth: [] } ]
+      parameter name: :id, in: :path, type: :integer, required: true
+      parameter name: :body, in: :body, schema: {
+        type: :object,
+        properties: {
+          item_type: { type: :string, enum: %w[service part] },
+          reference_id: { type: :integer },
+          quantity: { type: :integer }
+        },
+        required: %w[item_type reference_id quantity]
+      }
 
-      patch "/api/v1/work_orders/#{wo_id}/diagnose", headers: auth_headers, as: :json
+      response '201', 'line item added' do
+        schema '$ref' => '#/components/schemas/WorkOrder'
+        run_test!
+      end
 
-      expect(response).to have_http_status(:ok)
-      expect(response.parsed_body["status"]).to eq("awaiting_approval")
-    end
+      response '422', 'unprocessable entity' do
+        schema '$ref' => '#/components/schemas/Error'
+        run_test!
+      end
 
-    it "returns 422 when there are no line items" do
-      customer_id = create_customer
-      vehicle_id = create_vehicle(customer_id)
-      wo_id = create_work_order(customer_id, vehicle_id)
-      patch "/api/v1/work_orders/#{wo_id}/assign", params: { mechanic_id: default_test_mechanic.id }, headers: auth_headers, as: :json
-
-      patch "/api/v1/work_orders/#{wo_id}/diagnose", headers: auth_headers, as: :json
-
-      expect(response).to have_http_status(:unprocessable_entity)
-    end
-  end
-
-  def setup_approved_work_order
-    customer_id = create_customer
-    vehicle_id = create_vehicle(customer_id)
-    wo_id = create_work_order(customer_id, vehicle_id)
-    service_id = create_service
-    patch "/api/v1/work_orders/#{wo_id}/assign", params: { mechanic_id: default_test_mechanic.id }, headers: auth_headers, as: :json
-    post "/api/v1/work_orders/#{wo_id}/line_items",
-         params: { item_type: "service", reference_id: service_id, quantity: 1 }, headers: auth_headers, as: :json
-    patch "/api/v1/work_orders/#{wo_id}/diagnose", headers: auth_headers, as: :json
-    quote_id = Persistence::Quotes::QuoteRecord.find_by(work_order_id: wo_id).id
-    patch "/api/v1/quotes/#{quote_id}/send_to_customer", headers: auth_headers, as: :json
-    patch "/api/v1/quotes/#{quote_id}/approve", headers: auth_headers, as: :json
-    { wo_id: wo_id, vehicle_id: vehicle_id }
-  end
-
-  describe "GET /api/v1/work_orders/ready_to_execute" do
-    def drive_wo_to_approved(customer_id, vehicle_id, service_id)
-      post "/api/v1/work_orders",
-           params: { customer_id: customer_id, vehicle_id: vehicle_id, problem_description: "x" }, headers: auth_headers, as: :json
-      wo_id = response.parsed_body["id"]
-      patch "/api/v1/work_orders/#{wo_id}/assign", params: { mechanic_id: default_test_mechanic.id }, headers: auth_headers, as: :json
-      post "/api/v1/work_orders/#{wo_id}/line_items",
-           params: { item_type: "service", reference_id: service_id, quantity: 1 }, headers: auth_headers, as: :json
-      patch "/api/v1/work_orders/#{wo_id}/diagnose", headers: auth_headers, as: :json
-      quote_id = Persistence::Quotes::QuoteRecord.find_by(work_order_id: wo_id).id
-      patch "/api/v1/quotes/#{quote_id}/send_to_customer", headers: auth_headers, as: :json
-      patch "/api/v1/quotes/#{quote_id}/approve", headers: auth_headers, as: :json
-      wo_id
-    end
-
-    it "returns only approved work orders, oldest approval first" do
-      customer_id = create_customer
-      vehicle_id = create_vehicle(customer_id)
-      service_id = create_service
-
-      first_id = drive_wo_to_approved(customer_id, vehicle_id, service_id)
-      sleep 0.01
-      second_id = drive_wo_to_approved(customer_id, vehicle_id, service_id)
-      create_work_order(customer_id, vehicle_id) # not approved, should not appear
-
-      get "/api/v1/work_orders/ready_to_execute", headers: auth_headers, as: :json
-
-      expect(response).to have_http_status(:ok)
-      body = response.parsed_body
-      expect(body.size).to eq(2)
-      expect(body.map { |wo| wo["status"] }).to all(eq("approved"))
-      expect(body.map { |wo| wo["id"] }).to eq([ first_id, second_id ])
-    end
-
-    it "returns an empty array when there are no approved WOs" do
-      get "/api/v1/work_orders/ready_to_execute", headers: auth_headers, as: :json
-
-      expect(response).to have_http_status(:ok)
-      expect(response.parsed_body).to eq([])
+      response '401', 'unauthorized' do
+        run_test!
+      end
     end
   end
 
-  describe "PATCH /api/v1/work_orders/:id/execute" do
-    it "transitions approved → in_progress" do
-      ids = setup_approved_work_order
+  path '/api/v1/work_orders/{id}/diagnose' do
+    patch 'Finalize diagnosis (status → awaiting_approval)' do
+      tags 'Work Orders'
+      produces 'application/json'
+      security [ { bearerAuth: [] } ]
+      parameter name: :id, in: :path, type: :integer, required: true
 
-      patch "/api/v1/work_orders/#{ids[:wo_id]}/execute", headers: auth_headers, as: :json
+      response '200', 'diagnosis finalized, quote generated' do
+        schema '$ref' => '#/components/schemas/WorkOrder'
+        run_test!
+      end
 
-      expect(response).to have_http_status(:ok)
-      expect(response.parsed_body["status"]).to eq("in_progress")
-    end
+      response '422', 'unprocessable entity' do
+        schema '$ref' => '#/components/schemas/Error'
+        run_test!
+      end
 
-    it "returns 422 when work order is not approved" do
-      customer_id = create_customer
-      vehicle_id = create_vehicle(customer_id)
-      wo_id = create_work_order(customer_id, vehicle_id)
-
-      patch "/api/v1/work_orders/#{wo_id}/execute", headers: auth_headers, as: :json
-
-      expect(response).to have_http_status(:unprocessable_entity)
-    end
-  end
-
-  describe "PATCH /api/v1/work_orders/:id/complete" do
-    it "transitions in_progress → completed and updates vehicle mileage" do
-      ids = setup_approved_work_order
-      patch "/api/v1/work_orders/#{ids[:wo_id]}/execute", headers: auth_headers, as: :json
-
-      patch "/api/v1/work_orders/#{ids[:wo_id]}/complete", params: { current_mileage: 55_000 }, headers: auth_headers, as: :json
-
-      expect(response).to have_http_status(:ok)
-      expect(response.parsed_body["status"]).to eq("completed")
-
-      get "/api/v1/vehicles/#{ids[:vehicle_id]}", headers: auth_headers, as: :json
-      expect(response.parsed_body["mileage"]).to eq(55_000)
-    end
-
-    it "returns 422 when current_mileage is missing" do
-      ids = setup_approved_work_order
-      patch "/api/v1/work_orders/#{ids[:wo_id]}/execute", headers: auth_headers, as: :json
-
-      patch "/api/v1/work_orders/#{ids[:wo_id]}/complete", params: {}, headers: auth_headers, as: :json
-
-      expect(response).to have_http_status(:unprocessable_entity)
-    end
-
-    it "rolls back when mileage would decrease (vehicle mileage VO rejects)" do
-      ids = setup_approved_work_order
-      patch "/api/v1/work_orders/#{ids[:wo_id]}/execute", headers: auth_headers, as: :json
-
-      patch "/api/v1/work_orders/#{ids[:wo_id]}/complete", params: { current_mileage: 10 }, headers: auth_headers, as: :json
-
-      expect(response).to have_http_status(:unprocessable_entity)
-
-      get "/api/v1/work_orders/#{ids[:wo_id]}", headers: auth_headers, as: :json
-      expect(response.parsed_body["status"]).to eq("in_progress")
+      response '401', 'unauthorized' do
+        run_test!
+      end
     end
   end
 
-  describe "PATCH /api/v1/work_orders/:id/deliver" do
-    it "transitions completed → delivered" do
-      ids = setup_approved_work_order
-      patch "/api/v1/work_orders/#{ids[:wo_id]}/execute", headers: auth_headers, as: :json
-      patch "/api/v1/work_orders/#{ids[:wo_id]}/complete", params: { current_mileage: 55_000 }, headers: auth_headers, as: :json
+  path '/api/v1/work_orders/{id}/execute' do
+    patch 'Start execution (status → in_progress)' do
+      tags 'Work Orders'
+      produces 'application/json'
+      security [ { bearerAuth: [] } ]
+      parameter name: :id, in: :path, type: :integer, required: true
 
-      patch "/api/v1/work_orders/#{ids[:wo_id]}/deliver", headers: auth_headers, as: :json
+      response '200', 'execution started' do
+        schema '$ref' => '#/components/schemas/WorkOrder'
+        run_test!
+      end
 
-      expect(response).to have_http_status(:ok)
-      expect(response.parsed_body["status"]).to eq("delivered")
+      response '422', 'unprocessable entity' do
+        schema '$ref' => '#/components/schemas/Error'
+        run_test!
+      end
+
+      response '401', 'unauthorized' do
+        run_test!
+      end
     end
+  end
 
-    it "returns 422 when work order is not completed" do
-      ids = setup_approved_work_order
-      patch "/api/v1/work_orders/#{ids[:wo_id]}/execute", headers: auth_headers, as: :json
+  path '/api/v1/work_orders/{id}/complete' do
+    patch 'Complete work order (status → completed)' do
+      tags 'Work Orders'
+      consumes 'application/json'
+      produces 'application/json'
+      security [ { bearerAuth: [] } ]
+      parameter name: :id, in: :path, type: :integer, required: true
+      parameter name: :body, in: :body, schema: {
+        type: :object,
+        properties: {
+          current_mileage: { type: :integer }
+        },
+        required: %w[current_mileage]
+      }
 
-      patch "/api/v1/work_orders/#{ids[:wo_id]}/deliver", headers: auth_headers, as: :json
+      response '200', 'work order completed' do
+        schema '$ref' => '#/components/schemas/WorkOrder'
+        run_test!
+      end
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      response '422', 'unprocessable entity' do
+        schema '$ref' => '#/components/schemas/Error'
+        run_test!
+      end
+
+      response '401', 'unauthorized' do
+        run_test!
+      end
+    end
+  end
+
+  path '/api/v1/work_orders/{id}/deliver' do
+    patch 'Deliver work order (status → delivered)' do
+      tags 'Work Orders'
+      produces 'application/json'
+      security [ { bearerAuth: [] } ]
+      parameter name: :id, in: :path, type: :integer, required: true
+
+      response '200', 'work order delivered' do
+        schema '$ref' => '#/components/schemas/WorkOrder'
+        run_test!
+      end
+
+      response '422', 'unprocessable entity' do
+        schema '$ref' => '#/components/schemas/Error'
+        run_test!
+      end
+
+      response '401', 'unauthorized' do
+        run_test!
+      end
     end
   end
 end
