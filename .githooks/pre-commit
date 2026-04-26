@@ -1,9 +1,30 @@
 #!/usr/bin/env bash
 set -e
 
+STAGED=$(git diff --cached --name-only)
+
 # Regenerate swagger/v1/swagger.json if any request spec or swagger_helper changed
-if git diff --cached --name-only | grep -qE '^spec/(requests/.*_spec\.rb|swagger_helper\.rb)$'; then
+if echo "$STAGED" | grep -qE '^spec/(requests/.*_spec\.rb|swagger_helper\.rb)$'; then
   echo "→ Swagger spec changed — regenerating swagger/v1/swagger.json"
   bundle exec rake rswag:specs:swaggerize
   git add swagger/v1/swagger.json
+fi
+
+# Block commit if API implementation changed without updating any request spec
+if echo "$STAGED" | grep -qE '^(app/controllers/api/|config/routes\.rb)'; then
+  if ! echo "$STAGED" | grep -qE '^spec/requests/.*_spec\.rb$'; then
+    echo ""
+    echo "ERROR: API implementation changed but no swagger spec was updated."
+    echo ""
+    echo "  Staged API files:"
+    echo "$STAGED" | grep -E '^(app/controllers/api/|config/routes\.rb)' | sed 's/^/    /'
+    echo ""
+    echo "  If the API contract changed, update the relevant spec in spec/requests/"
+    echo "  and re-run the commit."
+    echo ""
+    echo "  If this is a pure internal refactor with no contract change, bypass with:"
+    echo "    git commit --no-verify"
+    echo ""
+    exit 1
+  fi
 fi
