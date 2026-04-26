@@ -2,7 +2,7 @@
 
 require 'swagger_helper'
 
-RSpec.describe 'Api::V1::Services', swagger_doc: 'v1/swagger.json', type: :request do
+RSpec.describe 'Api::V1::Services', openapi_spec: 'v1/swagger.json', type: :request do
   path '/api/v1/services' do
     get 'List services' do
       tags 'Services'

@@ -3,7 +3,7 @@
 require "rails_helper"
 require 'swagger_helper'
 
-RSpec.describe "Api::V1::Customers", swagger_doc: 'v1/swagger.json', type: :request do
+RSpec.describe "Api::V1::Customers", openapi_spec: 'v1/swagger.json', type: :request do
   let(:valid_params) do
     {
       person_type: "individual",

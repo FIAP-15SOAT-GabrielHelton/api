@@ -2,7 +2,7 @@
 
 require 'swagger_helper'
 
-RSpec.describe 'Api::V1::InventoryItems', swagger_doc: 'v1/swagger.json', type: :request do
+RSpec.describe 'Api::V1::InventoryItems', openapi_spec: 'v1/swagger.json', type: :request do
   path '/api/v1/inventory_items' do
     get 'List inventory items' do
       tags 'Inventory'

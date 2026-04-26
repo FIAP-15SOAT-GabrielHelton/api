@@ -2,7 +2,7 @@
 
 require 'swagger_helper'
 
-RSpec.describe 'Api::V1::WorkOrders', swagger_doc: 'v1/swagger.json', type: :request do
+RSpec.describe 'Api::V1::WorkOrders', openapi_spec: 'v1/swagger.json', type: :request do
   path '/api/v1/work_orders' do
     get 'List work orders' do
       tags 'Work Orders'

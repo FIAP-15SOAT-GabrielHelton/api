@@ -2,7 +2,7 @@
 
 require 'swagger_helper'
 
-RSpec.describe 'Api::V1::Quotes', swagger_doc: 'v1/swagger.json', type: :request do
+RSpec.describe 'Api::V1::Quotes', openapi_spec: 'v1/swagger.json', type: :request do
   path '/api/v1/quotes/{id}' do
     get 'Get quote by ID' do
       tags 'Quotes'

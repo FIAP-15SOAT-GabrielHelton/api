@@ -11,10 +11,10 @@ RSpec.configure do |config|
 
   # Define one or more Swagger documents and provide global metadata for each one
   # When you run the 'rswag:specs:swaggerize' rake task, the complete Swagger will
-  # be generated at the provided relative path under swagger_root
+  # be generated at the provided relative path under openapi_root
   # By default, the operations defined in spec files are added to the first
-  # document below. You can override this behavior by adding a swagger_doc tag to the
-  # the root example_group in your specs, e.g. describe '...', swagger_doc: 'v2/swagger.json'
+  # document below. You can override this behavior by adding an openapi_spec tag to the
+  # the root example_group in your specs, e.g. describe '...', openapi_spec: 'v2/swagger.json'
   config.openapi_specs = {
     'v1/swagger.json' => {
       openapi: '3.0.1',
@@ -145,7 +145,7 @@ RSpec.configure do |config|
   }
 
   # Specify the format of the output Swagger file when running 'rswag:specs:swaggerize'.
-  # The swagger_docs configuration option has the filename including format in
+  # The openapi_specs configuration option has the filename including format in
   # the key, this may want to be changed to avoid putting json at the end of the file
   # by changing the following set
   config.openapi_format = :json

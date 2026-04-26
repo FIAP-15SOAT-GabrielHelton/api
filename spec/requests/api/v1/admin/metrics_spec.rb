@@ -2,7 +2,7 @@
 
 require 'swagger_helper'
 
-RSpec.describe 'Api::V1::Admin::Metrics', swagger_doc: 'v1/swagger.json', type: :request do
+RSpec.describe 'Api::V1::Admin::Metrics', openapi_spec: 'v1/swagger.json', type: :request do
   path '/api/v1/admin/metrics' do
     get 'Get admin metrics' do
       tags 'Admin'
