@@ -47,7 +47,9 @@ RSpec.configure do |config|
               make: { type: :string },
               model: { type: :string },
               year: { type: :integer },
+              color: { type: :string },
               mileage: { type: :integer },
+              status: { type: :string, enum: %w[active inactive] },
               created_at: { type: :string, format: :date_time },
               updated_at: { type: :string, format: :date_time }
             },
@@ -59,11 +61,13 @@ RSpec.configure do |config|
               id: { type: :integer },
               name: { type: :string },
               description: { type: :string },
-              price: { type: :string },
+              base_price: { type: :string },
+              estimated_duration_minutes: { type: :integer },
+              active: { type: :boolean },
               created_at: { type: :string, format: :date_time },
               updated_at: { type: :string, format: :date_time }
             },
-            required: %w[id name price]
+            required: %w[id name base_price active]
           },
           InventoryItem: {
             type: :object,
@@ -72,11 +76,14 @@ RSpec.configure do |config|
               name: { type: :string },
               code: { type: :string },
               quantity: { type: :integer },
+              minimum_quantity: { type: :integer },
               unit_price: { type: :string },
+              below_minimum: { type: :boolean },
+              active: { type: :boolean },
               created_at: { type: :string, format: :date_time },
               updated_at: { type: :string, format: :date_time }
             },
-            required: %w[id name code quantity unit_price]
+            required: %w[id name code quantity unit_price active]
           },
           WorkOrder: {
             type: :object,

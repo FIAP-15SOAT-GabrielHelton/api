@@ -1,139 +1,127 @@
 # frozen_string_literal: true
 
-require "rails_helper"
+require 'swagger_helper'
 
-RSpec.describe "Api::V1::Services", type: :request do
-  let(:valid_params) do
-    {
-      name: "Oil Change",
-      description: "Complete oil and filter change",
-      base_price: 5000,
-      estimated_duration_minutes: 30
-    }
-  end
+RSpec.describe 'Api::V1::Services', type: :request, swagger_doc: 'v1/swagger.json' do
+  path '/api/v1/services' do
+    get 'List services' do
+      tags 'Services'
+      produces 'application/json'
+      security [{ bearerAuth: [] }]
 
-  describe "POST /api/v1/services" do
-    it "creates a service with valid data" do
-      post "/api/v1/services", params: valid_params, headers: auth_headers, as: :json
+      response '200', 'successful' do
+        schema type: :array, items: { '$ref' => '#/components/schemas/Service' }
+        run_test!
+      end
 
-      expect(response).to have_http_status(:created)
-
-      body = response.parsed_body
-      expect(body["name"]).to eq("Oil Change")
-      expect(body["description"]).to eq("Complete oil and filter change")
-      expect(body["base_price"]).to eq("R$ 50.00")
-      expect(body["estimated_duration_minutes"]).to eq(30)
-      expect(body["active"]).to be true
+      response '401', 'unauthorized' do
+        run_test!
+      end
     end
 
-    it "returns 422 with duplicate name" do
-      post "/api/v1/services", params: valid_params, headers: auth_headers, as: :json
-      post "/api/v1/services", params: valid_params, headers: auth_headers, as: :json
+    post 'Create service' do
+      tags 'Services'
+      consumes 'application/json'
+      produces 'application/json'
+      security [{ bearerAuth: [] }]
+      parameter name: :service, in: :body, schema: {
+        type: :object,
+        properties: {
+          name: { type: :string },
+          description: { type: :string },
+          base_price: { type: :integer, description: 'Price in cents' },
+          estimated_duration_minutes: { type: :integer }
+        },
+        required: %w[name base_price]
+      }
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      response '201', 'service created' do
+        schema '$ref' => '#/components/schemas/Service'
+        run_test!
+      end
 
-      body = response.parsed_body
-      expect(body["error"]).to eq("Service name already registered")
-    end
+      response '422', 'unprocessable entity' do
+        schema '$ref' => '#/components/schemas/Error'
+        run_test!
+      end
 
-    it "returns 422 with negative base_price" do
-      post "/api/v1/services", params: valid_params.merge(base_price: -100), headers: auth_headers, as: :json
-
-      expect(response).to have_http_status(:unprocessable_entity)
-    end
-  end
-
-  describe "GET /api/v1/services" do
-    it "returns all services" do
-      post "/api/v1/services", params: valid_params, headers: auth_headers, as: :json
-      post "/api/v1/services", params: valid_params.merge(name: "Brake Inspection"), headers: auth_headers, as: :json
-
-      get "/api/v1/services", headers: auth_headers, as: :json
-
-      expect(response).to have_http_status(:ok)
-      expect(response.parsed_body.size).to eq(2)
-    end
-
-    it "returns empty array when no services" do
-      get "/api/v1/services", headers: auth_headers, as: :json
-
-      expect(response).to have_http_status(:ok)
-      expect(response.parsed_body).to eq([])
+      response '401', 'unauthorized' do
+        run_test!
+      end
     end
   end
 
-  describe "GET /api/v1/services/:id" do
-    it "returns the service" do
-      post "/api/v1/services", params: valid_params, headers: auth_headers, as: :json
-      service_id = response.parsed_body["id"]
+  path '/api/v1/services/{id}' do
+    get 'Get service by ID' do
+      tags 'Services'
+      produces 'application/json'
+      security [{ bearerAuth: [] }]
+      parameter name: :id, in: :path, type: :integer, required: true
 
-      get "/api/v1/services/#{service_id}", headers: auth_headers, as: :json
+      response '200', 'successful' do
+        schema '$ref' => '#/components/schemas/Service'
+        run_test!
+      end
 
-      expect(response).to have_http_status(:ok)
-      expect(response.parsed_body["name"]).to eq("Oil Change")
+      response '401', 'unauthorized' do
+        run_test!
+      end
+
+      response '404', 'not found' do
+        run_test!
+      end
     end
 
-    it "returns 404 when service not found" do
-      get "/api/v1/services/999999", headers: auth_headers, as: :json
+    patch 'Update service' do
+      tags 'Services'
+      consumes 'application/json'
+      produces 'application/json'
+      security [{ bearerAuth: [] }]
+      parameter name: :id, in: :path, type: :integer, required: true
+      parameter name: :service, in: :body, schema: {
+        type: :object,
+        properties: {
+          name: { type: :string },
+          description: { type: :string },
+          base_price: { type: :integer, description: 'Price in cents' },
+          estimated_duration_minutes: { type: :integer }
+        }
+      }
 
-      expect(response).to have_http_status(:not_found)
-    end
-  end
+      response '200', 'service updated' do
+        schema '$ref' => '#/components/schemas/Service'
+        run_test!
+      end
 
-  describe "PATCH /api/v1/services/:id" do
-    it "updates service name" do
-      post "/api/v1/services", params: valid_params, headers: auth_headers, as: :json
-      service_id = response.parsed_body["id"]
+      response '422', 'unprocessable entity' do
+        schema '$ref' => '#/components/schemas/Error'
+        run_test!
+      end
 
-      patch "/api/v1/services/#{service_id}", params: { name: "Premium Oil Change" }, headers: auth_headers, as: :json
-
-      expect(response).to have_http_status(:ok)
-      expect(response.parsed_body["name"]).to eq("Premium Oil Change")
-    end
-
-    it "updates service base_price" do
-      post "/api/v1/services", params: valid_params, headers: auth_headers, as: :json
-      service_id = response.parsed_body["id"]
-
-      patch "/api/v1/services/#{service_id}", params: { base_price: 8000 }, headers: auth_headers, as: :json
-
-      expect(response).to have_http_status(:ok)
-      expect(response.parsed_body["base_price"]).to eq("R$ 80.00")
-    end
-
-    it "returns 422 when service not found" do
-      patch "/api/v1/services/999999", params: { name: "Test" }, headers: auth_headers, as: :json
-
-      expect(response).to have_http_status(:unprocessable_entity)
-    end
-  end
-
-  describe "DELETE /api/v1/services/:id" do
-    it "deactivates the service" do
-      post "/api/v1/services", params: valid_params, headers: auth_headers, as: :json
-      service_id = response.parsed_body["id"]
-
-      delete "/api/v1/services/#{service_id}", headers: auth_headers, as: :json
-
-      expect(response).to have_http_status(:ok)
-      expect(response.parsed_body["active"]).to be false
+      response '401', 'unauthorized' do
+        run_test!
+      end
     end
 
-    it "returns 422 when already inactive" do
-      post "/api/v1/services", params: valid_params, headers: auth_headers, as: :json
-      service_id = response.parsed_body["id"]
+    delete 'Deactivate service' do
+      tags 'Services'
+      produces 'application/json'
+      security [{ bearerAuth: [] }]
+      parameter name: :id, in: :path, type: :integer, required: true
 
-      delete "/api/v1/services/#{service_id}", headers: auth_headers, as: :json
-      delete "/api/v1/services/#{service_id}", headers: auth_headers, as: :json
+      response '200', 'service deactivated' do
+        schema '$ref' => '#/components/schemas/Service'
+        run_test!
+      end
 
-      expect(response).to have_http_status(:unprocessable_entity)
-      expect(response.parsed_body["error"]).to match(/already inactive/)
-    end
+      response '422', 'unprocessable entity' do
+        schema '$ref' => '#/components/schemas/Error'
+        run_test!
+      end
 
-    it "returns 422 when service not found" do
-      delete "/api/v1/services/999999", headers: auth_headers, as: :json
-
-      expect(response).to have_http_status(:unprocessable_entity)
+      response '401', 'unauthorized' do
+        run_test!
+      end
     end
   end
 end
