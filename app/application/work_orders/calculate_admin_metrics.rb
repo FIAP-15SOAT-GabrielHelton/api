@@ -13,8 +13,8 @@ module WorkOrders
 
     def perform
       Shared::Result.success(
-        total_execution_time_minutes: @metrics.total_execution_time_minutes,
-        completed_work_orders_count: @metrics.completed_work_orders_count
+        average_service_duration_minutes: @metrics.average_service_duration_minutes,
+        completed_services_count: @metrics.completed_services_count
       )
     end
   end
