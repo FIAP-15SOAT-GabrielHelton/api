@@ -14,7 +14,7 @@ RSpec.describe ReadModels::WorkOrderMetrics do
   let(:vehicle) do
     Persistence::Registrations::VehicleRecord.create!(
       customer_id: customer.id, license_plate: "ABC1D23", make: "Honda",
-      model: "Civic", year: 2020, color: "black", mileage: 50_000
+      model: "Civic", year: 2020, color: "black"
     )
   end
 

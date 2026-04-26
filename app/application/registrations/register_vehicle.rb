@@ -12,7 +12,7 @@ module Registrations
 
     private
 
-    def perform(customer_id:, license_plate:, make:, model:, year:, color:, mileage:)
+    def perform(customer_id:, license_plate:, make:, model:, year:, color:)
       customer = @customer_repository.find(customer_id)
       return Shared::Result.failure("Customer not found") unless customer
 
@@ -26,8 +26,7 @@ module Registrations
         make: make,
         model: model,
         year: year,
-        color: color,
-        mileage: mileage
+        color: color
       )
 
       saved_vehicle = @repository.save(vehicle)

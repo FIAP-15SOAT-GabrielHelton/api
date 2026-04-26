@@ -26,8 +26,7 @@ RSpec.describe "Api::V1::WorkOrders", type: :request do
       make: "Honda",
       model: "Civic",
       year: 2020,
-      color: "black",
-      mileage: 50_000
+      color: "black"
     }
   end
 
@@ -313,60 +312,14 @@ RSpec.describe "Api::V1::WorkOrders", type: :request do
   end
 
   describe "PATCH /api/v1/work_orders/:id/complete" do
-    it "transitions in_progress → completed and updates vehicle mileage" do
+    it "transitions in_progress → completed" do
       ids = setup_approved_work_order
       patch "/api/v1/work_orders/#{ids[:wo_id]}/execute", headers: auth_headers, as: :json
 
-      patch "/api/v1/work_orders/#{ids[:wo_id]}/complete", params: { current_mileage: 55_000 }, headers: auth_headers, as: :json
+      patch "/api/v1/work_orders/#{ids[:wo_id]}/complete", headers: auth_headers, as: :json
 
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body["status"]).to eq("completed")
-
-      get "/api/v1/vehicles/#{ids[:vehicle_id]}", headers: auth_headers, as: :json
-      expect(response.parsed_body["mileage"]).to eq(55_000)
-    end
-
-    it "returns 422 when current_mileage is missing" do
-      ids = setup_approved_work_order
-      patch "/api/v1/work_orders/#{ids[:wo_id]}/execute", headers: auth_headers, as: :json
-
-      patch "/api/v1/work_orders/#{ids[:wo_id]}/complete", params: {}, headers: auth_headers, as: :json
-
-      expect(response).to have_http_status(:unprocessable_entity)
-    end
-
-    it "rolls back when mileage would decrease (vehicle mileage VO rejects)" do
-      ids = setup_approved_work_order
-      patch "/api/v1/work_orders/#{ids[:wo_id]}/execute", headers: auth_headers, as: :json
-
-      patch "/api/v1/work_orders/#{ids[:wo_id]}/complete", params: { current_mileage: 10 }, headers: auth_headers, as: :json
-
-      expect(response).to have_http_status(:unprocessable_entity)
-
-      get "/api/v1/work_orders/#{ids[:wo_id]}", headers: auth_headers, as: :json
-      expect(response.parsed_body["status"]).to eq("in_progress")
-    end
-  end
-
-  describe "PATCH /api/v1/work_orders/:id/deliver" do
-    it "transitions completed → delivered" do
-      ids = setup_approved_work_order
-      patch "/api/v1/work_orders/#{ids[:wo_id]}/execute", headers: auth_headers, as: :json
-      patch "/api/v1/work_orders/#{ids[:wo_id]}/complete", params: { current_mileage: 55_000 }, headers: auth_headers, as: :json
-
-      patch "/api/v1/work_orders/#{ids[:wo_id]}/deliver", headers: auth_headers, as: :json
-
-      expect(response).to have_http_status(:ok)
-      expect(response.parsed_body["status"]).to eq("delivered")
-    end
-
-    it "returns 422 when work order is not completed" do
-      ids = setup_approved_work_order
-      patch "/api/v1/work_orders/#{ids[:wo_id]}/execute", headers: auth_headers, as: :json
-
-      patch "/api/v1/work_orders/#{ids[:wo_id]}/deliver", headers: auth_headers, as: :json
-
-      expect(response).to have_http_status(:unprocessable_entity)
     end
   end
 end

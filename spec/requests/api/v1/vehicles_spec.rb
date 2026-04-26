@@ -33,10 +33,9 @@ RSpec.describe 'Api::V1::Vehicles', openapi_spec: 'v1/swagger.json', type: :requ
           make: { type: :string },
           model: { type: :string },
           year: { type: :integer },
-          color: { type: :string },
-          mileage: { type: :integer }
+          color: { type: :string }
         },
-        required: %w[customer_id license_plate make model year color mileage]
+        required: %w[customer_id license_plate make model year color]
       }
 
       response '201', 'vehicle created' do
@@ -85,8 +84,7 @@ RSpec.describe 'Api::V1::Vehicles', openapi_spec: 'v1/swagger.json', type: :requ
       parameter name: :vehicle, in: :body, schema: {
         type: :object,
         properties: {
-          color: { type: :string },
-          mileage: { type: :integer }
+          color: { type: :string }
         }
       }
 
@@ -96,37 +94,6 @@ RSpec.describe 'Api::V1::Vehicles', openapi_spec: 'v1/swagger.json', type: :requ
       end
 
       response '422', 'unprocessable entity' do
-        schema '$ref' => '#/components/schemas/Error'
-        run_test!
-      end
-
-      response '401', 'unauthorized' do
-        run_test!
-      end
-    end
-  end
-
-  path '/api/v1/vehicles/{id}/update_mileage' do
-    patch 'Update vehicle mileage' do
-      tags 'Vehicles'
-      consumes 'application/json'
-      produces 'application/json'
-      security [ { bearerAuth: [] } ]
-      parameter name: :id, in: :path, type: :integer, required: true
-      parameter name: :body, in: :body, schema: {
-        type: :object,
-        properties: {
-          mileage: { type: :integer }
-        },
-        required: %w[mileage]
-      }
-
-      response '200', 'mileage updated' do
-        schema '$ref' => '#/components/schemas/Vehicle'
-        run_test!
-      end
-
-      response '422', 'mileage cannot decrease or vehicle not found' do
         schema '$ref' => '#/components/schemas/Error'
         run_test!
       end

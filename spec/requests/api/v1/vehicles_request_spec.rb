@@ -32,8 +32,7 @@ RSpec.describe "Api::V1::Vehicles", type: :request do
       make: "Toyota",
       model: "Corolla",
       year: 2022,
-      color: "Silver",
-      mileage: 15_000
+      color: "Silver"
     }
   end
 
@@ -46,7 +45,6 @@ RSpec.describe "Api::V1::Vehicles", type: :request do
       body = response.parsed_body
       expect(body["make"]).to eq("Toyota")
       expect(body["license_plate"]).to eq("ABC-1234")
-      expect(body["mileage"]).to eq(15_000)
       expect(body["customer_id"]).to eq(customer_id)
       expect(body["status"]).to eq("active")
     end
@@ -131,34 +129,6 @@ RSpec.describe "Api::V1::Vehicles", type: :request do
 
     it "returns 422 when vehicle not found" do
       patch "/api/v1/vehicles/999999", params: { color: "Black" }, headers: auth_headers, as: :json
-
-      expect(response).to have_http_status(:unprocessable_entity)
-    end
-  end
-
-  describe "PATCH /api/v1/vehicles/:id/update_mileage" do
-    it "updates mileage to higher value" do
-      post "/api/v1/vehicles", params: valid_params, headers: auth_headers, as: :json
-      vehicle_id = response.parsed_body["id"]
-
-      patch "/api/v1/vehicles/#{vehicle_id}/update_mileage", params: { mileage: 20_000 }, headers: auth_headers, as: :json
-
-      expect(response).to have_http_status(:ok)
-      expect(response.parsed_body["mileage"]).to eq(20_000)
-    end
-
-    it "returns 422 when mileage decreases" do
-      post "/api/v1/vehicles", params: valid_params, headers: auth_headers, as: :json
-      vehicle_id = response.parsed_body["id"]
-
-      patch "/api/v1/vehicles/#{vehicle_id}/update_mileage", params: { mileage: 10_000 }, headers: auth_headers, as: :json
-
-      expect(response).to have_http_status(:unprocessable_entity)
-      expect(response.parsed_body["error"]).to match(/Mileage cannot decrease/)
-    end
-
-    it "returns 422 when vehicle not found" do
-      patch "/api/v1/vehicles/999999/update_mileage", params: { mileage: 20_000 }, headers: auth_headers, as: :json
 
       expect(response).to have_http_status(:unprocessable_entity)
     end

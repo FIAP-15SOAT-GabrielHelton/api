@@ -71,10 +71,6 @@ module WorkOrders
       @completed_at = Time.now
     end
 
-    def deliver
-      @status = @status.transition_to(:delivered)
-    end
-
     def reject
       @status = @status.transition_to(:rejected)
     end

@@ -14,11 +14,7 @@ Rails.application.routes.draw do
 
       resources :customers, only: %i[index show create update destroy]
 
-      resources :vehicles, only: %i[index show create update] do
-        member do
-          patch :update_mileage
-        end
-      end
+      resources :vehicles, only: %i[index show create update]
 
       resources :inventory_items, only: %i[index show create update destroy] do
         member do
@@ -44,7 +40,6 @@ Rails.application.routes.draw do
           post :line_items, action: :add_line_item
           patch :execute
           patch :complete
-          patch :deliver
         end
       end
 

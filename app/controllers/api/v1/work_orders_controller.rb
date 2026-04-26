@@ -89,17 +89,7 @@ module Api
       end
 
       def complete
-        result = complete_work_order.call(id: params[:id], current_mileage: current_mileage_param)
-
-        if result.success?
-          render json: serialize(result.value)
-        else
-          render json: { error: result.error }, status: :unprocessable_entity
-        end
-      end
-
-      def deliver
-        result = deliver_work_order.call(id: params[:id])
+        result = complete_work_order.call(id: params[:id])
 
         if result.success?
           render json: serialize(result.value)
@@ -182,22 +172,7 @@ module Api
       end
 
       def complete_work_order
-        WorkOrders::CompleteWorkOrder.new(
-          work_order_repository: work_order_repository,
-          update_mileage: Registrations::UpdateMileage.new(vehicle_repository: vehicle_repository)
-        )
-      end
-
-      def deliver_work_order
-        WorkOrders::DeliverWorkOrder.new(work_order_repository: work_order_repository)
-      end
-
-      def current_mileage_param
-        return nil if params[:current_mileage].nil?
-
-        Integer(params[:current_mileage])
-      rescue ArgumentError, TypeError
-        params[:current_mileage]
+        WorkOrders::CompleteWorkOrder.new(work_order_repository: work_order_repository)
       end
 
       def create_params
@@ -249,7 +224,7 @@ module Api
         {
           id: vehicle.id, license_plate: vehicle.license_plate.value,
           make: vehicle.make, model: vehicle.model, year: vehicle.year,
-          color: vehicle.color, mileage: vehicle.mileage.value
+          color: vehicle.color
         }
       end
 

@@ -28,8 +28,7 @@ RSpec.describe Registrations::RegisterVehicle do
       make: "Toyota",
       model: "Corolla",
       year: 2022,
-      color: "Silver",
-      mileage: 15_000
+      color: "Silver"
     }
   end
 

@@ -22,7 +22,7 @@ RSpec.describe Persistence::Quotes::ActiveRecordQuoteRepository do
     vehicle_repository.save(
       Registrations::Vehicle.new(
         id: nil, customer_id: customer.id, license_plate: "ABC1D23",
-        make: "Honda", model: "Civic", year: 2020, color: "black", mileage: 50_000
+        make: "Honda", model: "Civic", year: 2020, color: "black"
       )
     )
   end

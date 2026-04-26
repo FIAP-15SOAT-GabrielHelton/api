@@ -222,22 +222,6 @@ describe WorkOrders::WorkOrder do
     end
   end
 
-  describe "#deliver" do
-    it "transitions completed → delivered" do
-      wo = described_class.new(**valid_attrs.merge(status: :completed))
-
-      wo.deliver
-
-      expect(wo.delivered?).to be true
-    end
-
-    it "rejects deliver from non-completed status" do
-      wo = described_class.new(**valid_attrs.merge(status: :in_progress))
-
-      expect { wo.deliver }.to raise_error(/Invalid transition/)
-    end
-  end
-
   describe "#reject" do
     it "transitions to rejected from received" do
       wo = described_class.new(**valid_attrs)

@@ -2,13 +2,12 @@
 
 require_relative "../shared/entity"
 require_relative "value_objects/license_plate"
-require_relative "value_objects/mileage"
 
 module Registrations
   class Vehicle < Shared::Entity
-    attr_reader :customer_id, :license_plate, :make, :model, :year, :color, :mileage, :status
+    attr_reader :customer_id, :license_plate, :make, :model, :year, :color, :status
 
-    def initialize(id:, customer_id:, license_plate:, make:, model:, year:, color:, mileage:, status: :active)
+    def initialize(id:, customer_id:, license_plate:, make:, model:, year:, color:, status: :active)
       super(id: id)
       raise ArgumentError, "customer_id is required" if customer_id.nil?
 
@@ -18,7 +17,6 @@ module Registrations
       @model = model
       @year = Integer(year)
       @color = color
-      @mileage = ensure_mileage(mileage)
       @status = status.to_sym
     end
 
@@ -43,18 +41,10 @@ module Registrations
       @color = color if color
     end
 
-    def update_mileage(new_value)
-      @mileage = mileage.update(new_value)
-    end
-
     private
 
     def ensure_license_plate(plate)
       plate.is_a?(ValueObjects::LicensePlate) ? plate : ValueObjects::LicensePlate.new(plate)
-    end
-
-    def ensure_mileage(km)
-      km.is_a?(ValueObjects::Mileage) ? km : ValueObjects::Mileage.new(km)
     end
   end
 end

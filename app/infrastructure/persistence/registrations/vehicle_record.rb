@@ -11,7 +11,6 @@ module Persistence
 
       validates :license_plate, presence: true, uniqueness: true
       validates :make, :model, :year, presence: true
-      validates :mileage, numericality: { greater_than_or_equal_to: 0 }
     end
   end
 end

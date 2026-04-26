@@ -35,7 +35,6 @@ RSpec.describe Persistence::Registrations::ActiveRecordVehicleRepository do
       model: "Corolla",
       year: 2022,
       color: "Silver",
-      mileage: 15_000,
       **overrides
     )
   end
@@ -51,7 +50,6 @@ RSpec.describe Persistence::Registrations::ActiveRecordVehicleRepository do
       expect(found.id).to eq(saved.id)
       expect(found.make).to eq("Toyota")
       expect(found.license_plate.value).to eq("ABC1234")
-      expect(found.mileage.value).to eq(15_000)
       expect(found.customer_id).to eq(customer.id)
     end
 
@@ -67,16 +65,6 @@ RSpec.describe Persistence::Registrations::ActiveRecordVehicleRepository do
 
       found = repository.find(saved.id)
       expect(found.color).to eq("Black")
-    end
-
-    it "updates mileage" do
-      saved = repository.save(build_vehicle)
-
-      saved.update_mileage(20_000)
-      repository.save(saved)
-
-      found = repository.find(saved.id)
-      expect(found.mileage.value).to eq(20_000)
     end
   end
 
