@@ -60,13 +60,20 @@ RSpec.describe Persistence::WorkOrders::ActiveRecordWorkOrderRepository, "#searc
   end
 
   it "filters by mechanic_id" do
-    create_wo(customer_id: customer_id, vehicle_id: vehicle_id, mechanic_id: 1)
-    create_wo(customer_id: customer_id, vehicle_id: vehicle_id, mechanic_id: 2)
+    digest = BCrypt::Password.create("x")
+    mech1 = Persistence::Accounts::UserRecord.create!(
+      email: "m1@e.com", name: "M1", password_digest: digest, role: :mechanic
+    )
+    mech2 = Persistence::Accounts::UserRecord.create!(
+      email: "m2@e.com", name: "M2", password_digest: digest, role: :mechanic
+    )
+    create_wo(customer_id: customer_id, vehicle_id: vehicle_id, mechanic_id: mech1.id)
+    create_wo(customer_id: customer_id, vehicle_id: vehicle_id, mechanic_id: mech2.id)
 
-    result = repository.search(criteria: { mechanic_id: 2 })
+    result = repository.search(criteria: { mechanic_id: mech2.id })
 
     expect(result[:total]).to eq(1)
-    expect(result[:entries].first.mechanic_id).to eq(2)
+    expect(result[:entries].first.mechanic_id).to eq(mech2.id)
   end
 
   it "filters by date range (created_at)" do

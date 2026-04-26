@@ -12,7 +12,7 @@ module Accounts
 
     private
 
-    def perform(email:, name:, password:)
+    def perform(email:, name:, password:, role: :admin)
       normalized_email = ValueObjects::Email.new(email)
 
       existing = @repository.find_by_email(normalized_email.address)
@@ -22,7 +22,8 @@ module Accounts
         id: nil,
         email: normalized_email,
         name: name,
-        password_digest: BCrypt::Password.create(password)
+        password_digest: BCrypt::Password.create(password),
+        role: role
       )
 
       Shared::Result.success(@repository.save(user))

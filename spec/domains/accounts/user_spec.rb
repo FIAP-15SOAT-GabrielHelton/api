@@ -30,6 +30,20 @@ RSpec.describe Accounts::User do
     it "rejects unknown status" do
       expect { build_user(status: :banned) }.to raise_error(ArgumentError, /status/)
     end
+
+    it "defaults to admin role" do
+      expect(build_user.role).to eq(:admin)
+      expect(build_user).to be_admin
+    end
+
+    it "accepts other valid roles" do
+      expect(build_user(role: :mechanic)).to be_mechanic
+      expect(build_user(role: :receptionist)).to be_receptionist
+    end
+
+    it "rejects unknown role" do
+      expect { build_user(role: :ceo) }.to raise_error(ArgumentError, /role/)
+    end
   end
 
   describe "#authenticate" do

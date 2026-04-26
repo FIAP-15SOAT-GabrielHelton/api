@@ -122,6 +122,10 @@ module Api
         @vehicle_repository ||= Persistence::Registrations::ActiveRecordVehicleRepository.new
       end
 
+      def user_repository
+        @user_repository ||= Persistence::Accounts::ActiveRecordUserRepository.new
+      end
+
       def create_work_order
         WorkOrders::CreateWorkOrder.new(
           work_order_repository: work_order_repository,
@@ -148,7 +152,10 @@ module Api
       end
 
       def assign_work_order
-        WorkOrders::AssignWorkOrder.new(work_order_repository: work_order_repository)
+        WorkOrders::AssignWorkOrder.new(
+          work_order_repository: work_order_repository,
+          user_repository: user_repository
+        )
       end
 
       def diagnose_work_order
