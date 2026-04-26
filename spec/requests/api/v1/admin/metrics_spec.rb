@@ -2,12 +2,12 @@
 
 require 'swagger_helper'
 
-RSpec.describe 'Api::V1::Admin::Metrics', type: :request, swagger_doc: 'v1/swagger.json' do
+RSpec.describe 'Api::V1::Admin::Metrics', swagger_doc: 'v1/swagger.json', type: :request do
   path '/api/v1/admin/metrics' do
     get 'Get admin metrics' do
       tags 'Admin'
       produces 'application/json'
-      security [{ bearerAuth: [] }]
+      security [ { bearerAuth: [] } ]
 
       response '200', 'successful' do
         schema type: :object,

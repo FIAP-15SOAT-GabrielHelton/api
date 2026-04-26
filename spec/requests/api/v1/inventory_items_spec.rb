@@ -2,12 +2,12 @@
 
 require 'swagger_helper'
 
-RSpec.describe 'Api::V1::InventoryItems', type: :request, swagger_doc: 'v1/swagger.json' do
+RSpec.describe 'Api::V1::InventoryItems', swagger_doc: 'v1/swagger.json', type: :request do
   path '/api/v1/inventory_items' do
     get 'List inventory items' do
       tags 'Inventory'
       produces 'application/json'
-      security [{ bearerAuth: [] }]
+      security [ { bearerAuth: [] } ]
 
       response '200', 'successful' do
         schema type: :array, items: { '$ref' => '#/components/schemas/InventoryItem' }
@@ -23,7 +23,7 @@ RSpec.describe 'Api::V1::InventoryItems', type: :request, swagger_doc: 'v1/swagg
       tags 'Inventory'
       consumes 'application/json'
       produces 'application/json'
-      security [{ bearerAuth: [] }]
+      security [ { bearerAuth: [] } ]
       parameter name: :inventory_item, in: :body, schema: {
         type: :object,
         properties: {
@@ -57,7 +57,7 @@ RSpec.describe 'Api::V1::InventoryItems', type: :request, swagger_doc: 'v1/swagg
     get 'Get inventory item by ID' do
       tags 'Inventory'
       produces 'application/json'
-      security [{ bearerAuth: [] }]
+      security [ { bearerAuth: [] } ]
       parameter name: :id, in: :path, type: :integer, required: true
 
       response '200', 'successful' do
@@ -78,7 +78,7 @@ RSpec.describe 'Api::V1::InventoryItems', type: :request, swagger_doc: 'v1/swagg
       tags 'Inventory'
       consumes 'application/json'
       produces 'application/json'
-      security [{ bearerAuth: [] }]
+      security [ { bearerAuth: [] } ]
       parameter name: :id, in: :path, type: :integer, required: true
       parameter name: :inventory_item, in: :body, schema: {
         type: :object,
@@ -108,7 +108,7 @@ RSpec.describe 'Api::V1::InventoryItems', type: :request, swagger_doc: 'v1/swagg
     delete 'Deactivate inventory item' do
       tags 'Inventory'
       produces 'application/json'
-      security [{ bearerAuth: [] }]
+      security [ { bearerAuth: [] } ]
       parameter name: :id, in: :path, type: :integer, required: true
 
       response '200', 'item deactivated' do
@@ -132,7 +132,7 @@ RSpec.describe 'Api::V1::InventoryItems', type: :request, swagger_doc: 'v1/swagg
       tags 'Inventory'
       consumes 'application/json'
       produces 'application/json'
-      security [{ bearerAuth: [] }]
+      security [ { bearerAuth: [] } ]
       parameter name: :id, in: :path, type: :integer, required: true
       parameter name: :body, in: :body, schema: {
         type: :object,
@@ -163,7 +163,7 @@ RSpec.describe 'Api::V1::InventoryItems', type: :request, swagger_doc: 'v1/swagg
       tags 'Inventory'
       consumes 'application/json'
       produces 'application/json'
-      security [{ bearerAuth: [] }]
+      security [ { bearerAuth: [] } ]
       parameter name: :id, in: :path, type: :integer, required: true
       parameter name: :body, in: :body, schema: {
         type: :object,

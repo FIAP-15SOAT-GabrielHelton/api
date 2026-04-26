@@ -2,7 +2,7 @@
 
 require 'swagger_helper'
 
-RSpec.describe 'Api::V1::Tracking', type: :request, swagger_doc: 'v1/swagger.json' do
+RSpec.describe 'Api::V1::Tracking', swagger_doc: 'v1/swagger.json', type: :request do
   path '/api/v1/tracking/{protocol}' do
     get 'Track work order by protocol (public endpoint)' do
       tags 'Tracking'

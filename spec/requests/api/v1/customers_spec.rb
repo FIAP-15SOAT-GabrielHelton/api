@@ -3,7 +3,7 @@
 require "rails_helper"
 require 'swagger_helper'
 
-RSpec.describe "Api::V1::Customers", type: :request, swagger_doc: 'v1/swagger.json' do
+RSpec.describe "Api::V1::Customers", swagger_doc: 'v1/swagger.json', type: :request do
   let(:valid_params) do
     {
       person_type: "individual",
@@ -26,7 +26,7 @@ RSpec.describe "Api::V1::Customers", type: :request, swagger_doc: 'v1/swagger.js
       tags 'Customers'
       consumes 'application/json'
       produces 'application/json'
-      security [{ bearerAuth: [] }]
+      security [ { bearerAuth: [] } ]
       parameter name: :customer, in: :body, schema: {
         type: :object,
         properties: {
@@ -67,7 +67,7 @@ RSpec.describe "Api::V1::Customers", type: :request, swagger_doc: 'v1/swagger.js
     get 'List customers' do
       tags 'Customers'
       produces 'application/json'
-      security [{ bearerAuth: [] }]
+      security [ { bearerAuth: [] } ]
       parameter name: :page, in: :query, type: :integer, required: false, description: 'Page number'
       parameter name: :per_page, in: :query, type: :integer, required: false, description: 'Items per page'
 
@@ -100,7 +100,7 @@ RSpec.describe "Api::V1::Customers", type: :request, swagger_doc: 'v1/swagger.js
     get 'Get customer by ID' do
       tags 'Customers'
       produces 'application/json'
-      security [{ bearerAuth: [] }]
+      security [ { bearerAuth: [] } ]
       parameter name: :id, in: :path, type: :integer, required: true
 
       response '200', 'successful' do
@@ -121,7 +121,7 @@ RSpec.describe "Api::V1::Customers", type: :request, swagger_doc: 'v1/swagger.js
       tags 'Customers'
       consumes 'application/json'
       produces 'application/json'
-      security [{ bearerAuth: [] }]
+      security [ { bearerAuth: [] } ]
       parameter name: :id, in: :path, type: :integer, required: true
       parameter name: :customer, in: :body, schema: {
         type: :object,
@@ -153,7 +153,7 @@ RSpec.describe "Api::V1::Customers", type: :request, swagger_doc: 'v1/swagger.js
 
     delete 'Delete customer' do
       tags 'Customers'
-      security [{ bearerAuth: [] }]
+      security [ { bearerAuth: [] } ]
       parameter name: :id, in: :path, type: :integer, required: true
 
       response '204', 'customer deleted' do

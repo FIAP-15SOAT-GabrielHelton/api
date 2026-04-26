@@ -2,12 +2,12 @@
 
 require 'swagger_helper'
 
-RSpec.describe 'Api::V1::Services', type: :request, swagger_doc: 'v1/swagger.json' do
+RSpec.describe 'Api::V1::Services', swagger_doc: 'v1/swagger.json', type: :request do
   path '/api/v1/services' do
     get 'List services' do
       tags 'Services'
       produces 'application/json'
-      security [{ bearerAuth: [] }]
+      security [ { bearerAuth: [] } ]
 
       response '200', 'successful' do
         schema type: :array, items: { '$ref' => '#/components/schemas/Service' }
@@ -23,7 +23,7 @@ RSpec.describe 'Api::V1::Services', type: :request, swagger_doc: 'v1/swagger.jso
       tags 'Services'
       consumes 'application/json'
       produces 'application/json'
-      security [{ bearerAuth: [] }]
+      security [ { bearerAuth: [] } ]
       parameter name: :service, in: :body, schema: {
         type: :object,
         properties: {
@@ -55,7 +55,7 @@ RSpec.describe 'Api::V1::Services', type: :request, swagger_doc: 'v1/swagger.jso
     get 'Get service by ID' do
       tags 'Services'
       produces 'application/json'
-      security [{ bearerAuth: [] }]
+      security [ { bearerAuth: [] } ]
       parameter name: :id, in: :path, type: :integer, required: true
 
       response '200', 'successful' do
@@ -76,7 +76,7 @@ RSpec.describe 'Api::V1::Services', type: :request, swagger_doc: 'v1/swagger.jso
       tags 'Services'
       consumes 'application/json'
       produces 'application/json'
-      security [{ bearerAuth: [] }]
+      security [ { bearerAuth: [] } ]
       parameter name: :id, in: :path, type: :integer, required: true
       parameter name: :service, in: :body, schema: {
         type: :object,
@@ -106,7 +106,7 @@ RSpec.describe 'Api::V1::Services', type: :request, swagger_doc: 'v1/swagger.jso
     delete 'Deactivate service' do
       tags 'Services'
       produces 'application/json'
-      security [{ bearerAuth: [] }]
+      security [ { bearerAuth: [] } ]
       parameter name: :id, in: :path, type: :integer, required: true
 
       response '200', 'service deactivated' do

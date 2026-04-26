@@ -2,12 +2,12 @@
 
 require 'swagger_helper'
 
-RSpec.describe 'Api::V1::WorkOrders', type: :request, swagger_doc: 'v1/swagger.json' do
+RSpec.describe 'Api::V1::WorkOrders', swagger_doc: 'v1/swagger.json', type: :request do
   path '/api/v1/work_orders' do
     get 'List work orders' do
       tags 'Work Orders'
       produces 'application/json'
-      security [{ bearerAuth: [] }]
+      security [ { bearerAuth: [] } ]
       parameter name: :status, in: :query, type: :string, required: false,
                 description: 'Filter by status (received, diagnosing, awaiting_approval, approved, in_progress, completed, delivered, rejected)'
       parameter name: :customer_id, in: :query, type: :integer, required: false, description: 'Filter by customer ID'
@@ -41,7 +41,7 @@ RSpec.describe 'Api::V1::WorkOrders', type: :request, swagger_doc: 'v1/swagger.j
       tags 'Work Orders'
       consumes 'application/json'
       produces 'application/json'
-      security [{ bearerAuth: [] }]
+      security [ { bearerAuth: [] } ]
       parameter name: :work_order, in: :body, schema: {
         type: :object,
         properties: {
@@ -72,7 +72,7 @@ RSpec.describe 'Api::V1::WorkOrders', type: :request, swagger_doc: 'v1/swagger.j
     get 'List approved work orders ready to execute' do
       tags 'Work Orders'
       produces 'application/json'
-      security [{ bearerAuth: [] }]
+      security [ { bearerAuth: [] } ]
 
       response '200', 'successful' do
         schema type: :array, items: { '$ref' => '#/components/schemas/WorkOrder' }
@@ -89,7 +89,7 @@ RSpec.describe 'Api::V1::WorkOrders', type: :request, swagger_doc: 'v1/swagger.j
     get 'Get work order by ID' do
       tags 'Work Orders'
       produces 'application/json'
-      security [{ bearerAuth: [] }]
+      security [ { bearerAuth: [] } ]
       parameter name: :id, in: :path, type: :integer, required: true
 
       response '200', 'successful' do
@@ -112,7 +112,7 @@ RSpec.describe 'Api::V1::WorkOrders', type: :request, swagger_doc: 'v1/swagger.j
       tags 'Work Orders'
       consumes 'application/json'
       produces 'application/json'
-      security [{ bearerAuth: [] }]
+      security [ { bearerAuth: [] } ]
       parameter name: :id, in: :path, type: :integer, required: true
       parameter name: :body, in: :body, schema: {
         type: :object,
@@ -143,7 +143,7 @@ RSpec.describe 'Api::V1::WorkOrders', type: :request, swagger_doc: 'v1/swagger.j
       tags 'Work Orders'
       consumes 'application/json'
       produces 'application/json'
-      security [{ bearerAuth: [] }]
+      security [ { bearerAuth: [] } ]
       parameter name: :id, in: :path, type: :integer, required: true
       parameter name: :body, in: :body, schema: {
         type: :object,
@@ -175,7 +175,7 @@ RSpec.describe 'Api::V1::WorkOrders', type: :request, swagger_doc: 'v1/swagger.j
     patch 'Finalize diagnosis (status → awaiting_approval)' do
       tags 'Work Orders'
       produces 'application/json'
-      security [{ bearerAuth: [] }]
+      security [ { bearerAuth: [] } ]
       parameter name: :id, in: :path, type: :integer, required: true
 
       response '200', 'diagnosis finalized, quote generated' do
@@ -198,7 +198,7 @@ RSpec.describe 'Api::V1::WorkOrders', type: :request, swagger_doc: 'v1/swagger.j
     patch 'Start execution (status → in_progress)' do
       tags 'Work Orders'
       produces 'application/json'
-      security [{ bearerAuth: [] }]
+      security [ { bearerAuth: [] } ]
       parameter name: :id, in: :path, type: :integer, required: true
 
       response '200', 'execution started' do
@@ -222,7 +222,7 @@ RSpec.describe 'Api::V1::WorkOrders', type: :request, swagger_doc: 'v1/swagger.j
       tags 'Work Orders'
       consumes 'application/json'
       produces 'application/json'
-      security [{ bearerAuth: [] }]
+      security [ { bearerAuth: [] } ]
       parameter name: :id, in: :path, type: :integer, required: true
       parameter name: :body, in: :body, schema: {
         type: :object,
@@ -252,7 +252,7 @@ RSpec.describe 'Api::V1::WorkOrders', type: :request, swagger_doc: 'v1/swagger.j
     patch 'Deliver work order (status → delivered)' do
       tags 'Work Orders'
       produces 'application/json'
-      security [{ bearerAuth: [] }]
+      security [ { bearerAuth: [] } ]
       parameter name: :id, in: :path, type: :integer, required: true
 
       response '200', 'work order delivered' do

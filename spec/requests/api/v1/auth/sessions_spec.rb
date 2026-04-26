@@ -2,7 +2,7 @@
 
 require 'swagger_helper'
 
-RSpec.describe 'Api::V1::Auth::Sessions', type: :request, swagger_doc: 'v1/swagger.json' do
+RSpec.describe 'Api::V1::Auth::Sessions', swagger_doc: 'v1/swagger.json', type: :request do
   path '/api/v1/auth/login' do
     post 'Login' do
       tags 'Authentication'

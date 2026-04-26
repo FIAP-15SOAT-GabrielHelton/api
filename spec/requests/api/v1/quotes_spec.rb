@@ -2,12 +2,12 @@
 
 require 'swagger_helper'
 
-RSpec.describe 'Api::V1::Quotes', type: :request, swagger_doc: 'v1/swagger.json' do
+RSpec.describe 'Api::V1::Quotes', swagger_doc: 'v1/swagger.json', type: :request do
   path '/api/v1/quotes/{id}' do
     get 'Get quote by ID' do
       tags 'Quotes'
       produces 'application/json'
-      security [{ bearerAuth: [] }]
+      security [ { bearerAuth: [] } ]
       parameter name: :id, in: :path, type: :integer, required: true
 
       response '200', 'successful' do
@@ -29,7 +29,7 @@ RSpec.describe 'Api::V1::Quotes', type: :request, swagger_doc: 'v1/swagger.json'
     patch 'Send quote to customer (status → sent)' do
       tags 'Quotes'
       produces 'application/json'
-      security [{ bearerAuth: [] }]
+      security [ { bearerAuth: [] } ]
       parameter name: :id, in: :path, type: :integer, required: true
 
       response '200', 'quote sent' do
@@ -52,7 +52,7 @@ RSpec.describe 'Api::V1::Quotes', type: :request, swagger_doc: 'v1/swagger.json'
     patch 'Approve quote (status → approved, decrements stock)' do
       tags 'Quotes'
       produces 'application/json'
-      security [{ bearerAuth: [] }]
+      security [ { bearerAuth: [] } ]
       parameter name: :id, in: :path, type: :integer, required: true
 
       response '200', 'quote approved' do
@@ -75,7 +75,7 @@ RSpec.describe 'Api::V1::Quotes', type: :request, swagger_doc: 'v1/swagger.json'
     patch 'Reject quote (status → rejected)' do
       tags 'Quotes'
       produces 'application/json'
-      security [{ bearerAuth: [] }]
+      security [ { bearerAuth: [] } ]
       parameter name: :id, in: :path, type: :integer, required: true
 
       response '200', 'quote rejected' do

@@ -2,12 +2,12 @@
 
 require 'swagger_helper'
 
-RSpec.describe 'Api::V1::Vehicles', type: :request, swagger_doc: 'v1/swagger.json' do
+RSpec.describe 'Api::V1::Vehicles', swagger_doc: 'v1/swagger.json', type: :request do
   path '/api/v1/vehicles' do
     get 'List vehicles' do
       tags 'Vehicles'
       produces 'application/json'
-      security [{ bearerAuth: [] }]
+      security [ { bearerAuth: [] } ]
       parameter name: :customer_id, in: :query, type: :integer, required: false, description: 'Filter by customer ID'
 
       response '200', 'successful' do
@@ -24,7 +24,7 @@ RSpec.describe 'Api::V1::Vehicles', type: :request, swagger_doc: 'v1/swagger.jso
       tags 'Vehicles'
       consumes 'application/json'
       produces 'application/json'
-      security [{ bearerAuth: [] }]
+      security [ { bearerAuth: [] } ]
       parameter name: :vehicle, in: :body, schema: {
         type: :object,
         properties: {
@@ -59,7 +59,7 @@ RSpec.describe 'Api::V1::Vehicles', type: :request, swagger_doc: 'v1/swagger.jso
     get 'Get vehicle by ID' do
       tags 'Vehicles'
       produces 'application/json'
-      security [{ bearerAuth: [] }]
+      security [ { bearerAuth: [] } ]
       parameter name: :id, in: :path, type: :integer, required: true
 
       response '200', 'successful' do
@@ -80,7 +80,7 @@ RSpec.describe 'Api::V1::Vehicles', type: :request, swagger_doc: 'v1/swagger.jso
       tags 'Vehicles'
       consumes 'application/json'
       produces 'application/json'
-      security [{ bearerAuth: [] }]
+      security [ { bearerAuth: [] } ]
       parameter name: :id, in: :path, type: :integer, required: true
       parameter name: :vehicle, in: :body, schema: {
         type: :object,
@@ -111,7 +111,7 @@ RSpec.describe 'Api::V1::Vehicles', type: :request, swagger_doc: 'v1/swagger.jso
       tags 'Vehicles'
       consumes 'application/json'
       produces 'application/json'
-      security [{ bearerAuth: [] }]
+      security [ { bearerAuth: [] } ]
       parameter name: :id, in: :path, type: :integer, required: true
       parameter name: :body, in: :body, schema: {
         type: :object,
