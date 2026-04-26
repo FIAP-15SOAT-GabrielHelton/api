@@ -37,7 +37,22 @@ module Api
       end
 
       def services_from(work_order)
-        work_order.line_items.select { |item| item.item_type == :service }.map(&:name_snapshot)
+        work_order.service_line_items.map do |item|
+          {
+            id: item.id,
+            name: item.name_snapshot,
+            status: service_status(item),
+            started_at: item.started_at,
+            finished_at: item.finished_at
+          }
+        end
+      end
+
+      def service_status(item)
+        return "ready" if item.ready?
+        return "in_progress" if item.in_progress?
+
+        "pending"
       end
     end
   end

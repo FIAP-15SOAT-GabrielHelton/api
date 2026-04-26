@@ -16,7 +16,19 @@ RSpec.describe 'Api::V1::Tracking', openapi_spec: 'v1/swagger.json', type: :requ
                  protocol: { type: :string },
                  status: { type: :string },
                  problem_description: { type: :string },
-                 services: { type: :array, items: { type: :string } },
+                 services: {
+                   type: :array,
+                   items: {
+                     type: :object,
+                     properties: {
+                       id: { type: :integer },
+                       name: { type: :string },
+                       status: { type: :string, enum: %w[pending in_progress ready] },
+                       started_at: { type: :string, format: :date_time, nullable: true },
+                       finished_at: { type: :string, format: :date_time, nullable: true }
+                     }
+                   }
+                 },
                  created_at: { type: :string, format: :date_time },
                  updated_at: { type: :string, format: :date_time }
                }

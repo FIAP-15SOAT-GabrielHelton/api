@@ -54,7 +54,13 @@ RSpec.describe "Api::V1::Tracking", type: :request do
       expect(body["protocol"]).to eq(protocol)
       expect(body["status"]).to eq("awaiting_approval")
       expect(body["problem_description"]).to eq("Engine noise")
-      expect(body["services"]).to eq([ "Oil Change" ])
+      expect(body["services"].size).to eq(1)
+      expect(body["services"].first).to include(
+        "name" => "Oil Change",
+        "status" => "pending",
+        "started_at" => nil,
+        "finished_at" => nil
+      )
     end
 
     it "does not expose prices, parts, customer, vehicle, or mechanic" do
@@ -66,7 +72,8 @@ RSpec.describe "Api::V1::Tracking", type: :request do
       expect(body.keys).to contain_exactly(
         "protocol", "status", "problem_description", "services", "created_at", "updated_at"
       )
-      expect(body["services"]).not_to include("Brake Pad") # part hidden
+      service_names = body["services"].map { |s| s["name"] }
+      expect(service_names).not_to include("Brake Pad") # part hidden
       body_string = body.to_s
       expect(body_string).not_to include("5000") # price
       expect(body_string).not_to include("mechanic_id")

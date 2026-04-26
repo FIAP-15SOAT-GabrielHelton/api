@@ -98,7 +98,8 @@ module Persistence
           created_at: record.created_at,
           updated_at: record.updated_at,
           executed_at: record.executed_at,
-          completed_at: record.completed_at
+          completed_at: record.completed_at,
+          average_service_duration_minutes: record.average_service_duration_minutes&.to_f
         )
       end
 
@@ -109,7 +110,9 @@ module Persistence
           reference_id: record.reference_id,
           name_snapshot: record.name_snapshot,
           price_snapshot: record.price_snapshot_cents,
-          quantity: record.quantity
+          quantity: record.quantity,
+          started_at: record.started_at,
+          finished_at: record.finished_at
         )
       end
 
@@ -122,7 +125,8 @@ module Persistence
           mechanic_id: work_order.mechanic_id,
           protocol: work_order.protocol,
           executed_at: work_order.executed_at,
-          completed_at: work_order.completed_at
+          completed_at: work_order.completed_at,
+          average_service_duration_minutes: work_order.average_service_duration_minutes
         }
       end
 
@@ -132,7 +136,9 @@ module Persistence
           reference_id: line_item.reference_id,
           name_snapshot: line_item.name_snapshot,
           price_snapshot_cents: line_item.price_snapshot.cents,
-          quantity: line_item.quantity
+          quantity: line_item.quantity,
+          started_at: line_item.started_at,
+          finished_at: line_item.finished_at
         }
       end
     end

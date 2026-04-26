@@ -9,13 +9,17 @@ module WorkOrders
   class WorkOrder < Shared::Entity
     PROTOCOL_LENGTH = 8
 
+    class InvalidTransition < StandardError; end
+
     attr_reader :customer_id, :vehicle_id, :problem_description, :status, :mechanic_id,
-                :line_items, :protocol, :created_at, :updated_at, :executed_at, :completed_at
+                :line_items, :protocol, :created_at, :updated_at, :executed_at, :completed_at,
+                :average_service_duration_minutes
 
     def initialize(id:, customer_id:, vehicle_id:, problem_description:,
                    status: :received, mechanic_id: nil, line_items: [],
                    protocol: nil, created_at: nil, updated_at: nil,
-                   executed_at: nil, completed_at: nil)
+                   executed_at: nil, completed_at: nil,
+                   average_service_duration_minutes: nil)
       super(id: id)
       raise ArgumentError, "customer_id is required" if customer_id.nil?
       raise ArgumentError, "vehicle_id is required" if vehicle_id.nil?
@@ -31,10 +35,20 @@ module WorkOrders
       @updated_at = updated_at
       @executed_at = executed_at
       @completed_at = completed_at
+      @average_service_duration_minutes = average_service_duration_minutes
     end
 
     ValueObjects::WorkOrderStatus::STATES.each do |state|
       define_method("#{state}?") { status.value == state }
+    end
+
+    def service_line_items
+      line_items.select(&:service?)
+    end
+
+    def all_services_ready?
+      services = service_line_items
+      services.any? && services.all?(&:ready?)
     end
 
     def assign(mechanic_id)
@@ -67,8 +81,11 @@ module WorkOrders
     end
 
     def complete
+      raise InvalidTransition, "All services must be finished before completing" unless all_services_ready?
+
       @status = @status.transition_to(:completed)
       @completed_at = Time.now
+      @average_service_duration_minutes = compute_average_service_duration_minutes
     end
 
     def reject
@@ -76,6 +93,13 @@ module WorkOrders
     end
 
     private
+
+    def compute_average_service_duration_minutes
+      durations = service_line_items.map(&:duration_minutes).compact
+      return nil if durations.empty?
+
+      (durations.sum / durations.size).round(2)
+    end
 
     def ensure_status(value)
       value.is_a?(ValueObjects::WorkOrderStatus) ? value : ValueObjects::WorkOrderStatus.new(value)

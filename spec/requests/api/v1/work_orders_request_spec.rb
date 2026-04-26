@@ -311,15 +311,83 @@ RSpec.describe "Api::V1::WorkOrders", type: :request do
     end
   end
 
-  describe "PATCH /api/v1/work_orders/:id/complete" do
-    it "transitions in_progress → completed" do
+  describe "service execution lifecycle" do
+    it "starts a service and exposes started_at + in_progress status in tracking" do
       ids = setup_approved_work_order
       patch "/api/v1/work_orders/#{ids[:wo_id]}/execute", headers: auth_headers, as: :json
+      line_item_id = response.parsed_body["line_items"].first["id"]
 
-      patch "/api/v1/work_orders/#{ids[:wo_id]}/complete", headers: auth_headers, as: :json
+      patch "/api/v1/work_orders/#{ids[:wo_id]}/line_items/#{line_item_id}/start", headers: auth_headers, as: :json
 
       expect(response).to have_http_status(:ok)
-      expect(response.parsed_body["status"]).to eq("completed")
+      item = response.parsed_body["line_items"].find { |li| li["id"] == line_item_id }
+      expect(item["started_at"]).not_to be_nil
+      expect(item["finished_at"]).to be_nil
     end
+
+    it "rejects start when work order is not in execution" do
+      ids = setup_approved_work_order
+      get "/api/v1/work_orders/#{ids[:wo_id]}", headers: auth_headers, as: :json
+      line_item_id = response.parsed_body["line_items"].first["id"]
+
+      patch "/api/v1/work_orders/#{ids[:wo_id]}/line_items/#{line_item_id}/start", headers: auth_headers, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+
+    it "rejects finish when service has not been started" do
+      ids = setup_approved_work_order
+      patch "/api/v1/work_orders/#{ids[:wo_id]}/execute", headers: auth_headers, as: :json
+      line_item_id = response.parsed_body["line_items"].first["id"]
+
+      patch "/api/v1/work_orders/#{ids[:wo_id]}/line_items/#{line_item_id}/finish", headers: auth_headers, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+
+    it "auto-completes the work order when the last service is finished" do
+      ids = setup_approved_work_order
+      patch "/api/v1/work_orders/#{ids[:wo_id]}/execute", headers: auth_headers, as: :json
+      line_item_id = response.parsed_body["line_items"].first["id"]
+      patch "/api/v1/work_orders/#{ids[:wo_id]}/line_items/#{line_item_id}/start", headers: auth_headers, as: :json
+
+      patch "/api/v1/work_orders/#{ids[:wo_id]}/line_items/#{line_item_id}/finish", headers: auth_headers, as: :json
+
+      expect(response).to have_http_status(:ok)
+      body = response.parsed_body
+      expect(body["status"]).to eq("completed")
+      expect(body["completed_at"]).not_to be_nil
+      expect(body["average_service_duration_minutes"]).not_to be_nil
+    end
+
+    it "keeps the work order in_progress while there are pending services" do
+      wo_id, first_line_item_id = setup_two_service_work_order_in_progress
+
+      patch "/api/v1/work_orders/#{wo_id}/line_items/#{first_line_item_id}/start", headers: auth_headers, as: :json
+      patch "/api/v1/work_orders/#{wo_id}/line_items/#{first_line_item_id}/finish", headers: auth_headers, as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body["status"]).to eq("in_progress")
+    end
+  end
+
+  def setup_two_service_work_order_in_progress
+    customer_id = create_customer
+    vehicle_id = create_vehicle(customer_id)
+    service_id = create_service
+    service2_id = create_service(name: "Brake Replacement")
+    wo_id = create_work_order(customer_id, vehicle_id)
+    patch "/api/v1/work_orders/#{wo_id}/assign", params: { mechanic_id: default_test_mechanic.id }, headers: auth_headers, as: :json
+    post "/api/v1/work_orders/#{wo_id}/line_items",
+         params: { item_type: "service", reference_id: service_id, quantity: 1 }, headers: auth_headers, as: :json
+    first_line_item_id = response.parsed_body["line_items"].last["id"]
+    post "/api/v1/work_orders/#{wo_id}/line_items",
+         params: { item_type: "service", reference_id: service2_id, quantity: 1 }, headers: auth_headers, as: :json
+    patch "/api/v1/work_orders/#{wo_id}/diagnose", headers: auth_headers, as: :json
+    quote_id = Persistence::Quotes::QuoteRecord.find_by(work_order_id: wo_id).id
+    patch "/api/v1/quotes/#{quote_id}/send_to_customer", headers: auth_headers, as: :json
+    patch "/api/v1/quotes/#{quote_id}/approve", headers: auth_headers, as: :json
+    patch "/api/v1/work_orders/#{wo_id}/execute", headers: auth_headers, as: :json
+    [ wo_id, first_line_item_id ]
   end
 end

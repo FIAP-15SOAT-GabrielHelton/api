@@ -98,6 +98,26 @@ module Api
         end
       end
 
+      def start_line_item
+        result = start_line_item_service.call(work_order_id: params[:id], line_item_id: params[:line_item_id])
+
+        if result.success?
+          render json: serialize(result.value)
+        else
+          render json: { error: result.error }, status: :unprocessable_entity
+        end
+      end
+
+      def finish_line_item
+        result = finish_line_item_service.call(work_order_id: params[:id], line_item_id: params[:line_item_id])
+
+        if result.success?
+          render json: serialize(result.value)
+        else
+          render json: { error: result.error }, status: :unprocessable_entity
+        end
+      end
+
       private
 
       def work_order_repository
@@ -175,6 +195,14 @@ module Api
         WorkOrders::CompleteWorkOrder.new(work_order_repository: work_order_repository)
       end
 
+      def start_line_item_service
+        WorkOrders::StartLineItemService.new(work_order_repository: work_order_repository)
+      end
+
+      def finish_line_item_service
+        WorkOrders::FinishLineItemService.new(work_order_repository: work_order_repository)
+      end
+
       def create_params
         params.permit(:customer_id, :vehicle_id, :problem_description).to_h.symbolize_keys
       end
@@ -196,6 +224,7 @@ module Api
           protocol: work_order.protocol,
           executed_at: work_order.executed_at,
           completed_at: work_order.completed_at,
+          average_service_duration_minutes: work_order.average_service_duration_minutes,
           created_at: work_order.created_at,
           updated_at: work_order.updated_at
         }
@@ -250,7 +279,9 @@ module Api
           reference_id: item.reference_id,
           name_snapshot: item.name_snapshot,
           price_snapshot: item.price_snapshot.format,
-          quantity: item.quantity
+          quantity: item.quantity,
+          started_at: item.started_at,
+          finished_at: item.finished_at
         }
       end
     end

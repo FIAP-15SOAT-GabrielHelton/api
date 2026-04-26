@@ -18,36 +18,59 @@ RSpec.describe ReadModels::WorkOrderMetrics do
     )
   end
 
-  def create_completed_wo(executed_at:, completed_at:)
+  def create_completed_wo
     Persistence::WorkOrders::WorkOrderRecord.create!(
       customer_id: customer.id, vehicle_id: vehicle.id,
       problem_description: "x", status: "completed",
-      protocol: SecureRandom.alphanumeric(8).upcase,
-      executed_at: executed_at, completed_at: completed_at
-    )
-  end
-
-  it "returns nil for average when there are no completed work orders" do
-    expect(metrics.average_execution_time_minutes).to be_nil
-    expect(metrics.completed_count).to eq(0)
-  end
-
-  it "ignores work orders without executed_at or completed_at" do
-    Persistence::WorkOrders::WorkOrderRecord.create!(
-      customer_id: customer.id, vehicle_id: vehicle.id,
-      problem_description: "y", status: "received",
       protocol: SecureRandom.alphanumeric(8).upcase
     )
+  end
 
+  def add_finished_service(work_order, duration_minutes:)
+    Persistence::WorkOrders::LineItemRecord.create!(
+      work_order_id: work_order.id,
+      item_type: "service", reference_id: 1, name_snapshot: "Oil",
+      price_snapshot_cents: 5_000, quantity: 1,
+      started_at: duration_minutes.minutes.ago, finished_at: Time.now
+    )
+  end
+
+  it "returns nil for average when there are no finished services" do
     expect(metrics.average_execution_time_minutes).to be_nil
     expect(metrics.completed_count).to eq(0)
   end
 
-  it "computes the average across completed WOs in minutes" do
-    create_completed_wo(executed_at: 90.minutes.ago, completed_at: Time.now) # 90 min
-    create_completed_wo(executed_at: 30.minutes.ago, completed_at: Time.now) # 30 min
+  it "ignores services that have not started or finished" do
+    wo = create_completed_wo
+    Persistence::WorkOrders::LineItemRecord.create!(
+      work_order_id: wo.id,
+      item_type: "service", reference_id: 1, name_snapshot: "Oil",
+      price_snapshot_cents: 5_000, quantity: 1
+    )
+
+    expect(metrics.average_execution_time_minutes).to be_nil
+    expect(metrics.completed_count).to eq(1)
+  end
+
+  it "computes the average duration of finished services across the system" do
+    wo1 = create_completed_wo
+    wo2 = create_completed_wo
+    add_finished_service(wo1, duration_minutes: 90)
+    add_finished_service(wo2, duration_minutes: 30)
 
     expect(metrics.average_execution_time_minutes).to be_within(0.5).of(60.0)
     expect(metrics.completed_count).to eq(2)
+  end
+
+  it "ignores parts when computing the average" do
+    wo = create_completed_wo
+    add_finished_service(wo, duration_minutes: 60)
+    Persistence::WorkOrders::LineItemRecord.create!(
+      work_order_id: wo.id,
+      item_type: "part", reference_id: 1, name_snapshot: "Pad",
+      price_snapshot_cents: 1_000, quantity: 2
+    )
+
+    expect(metrics.average_execution_time_minutes).to be_within(0.5).of(60.0)
   end
 end

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_04_26_211500) do
+ActiveRecord::Schema[8.1].define(version: 2026_04_27_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -49,11 +49,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_26_211500) do
 
   create_table "line_items", force: :cascade do |t|
     t.datetime "created_at", null: false
+    t.datetime "finished_at"
     t.string "item_type", null: false
     t.string "name_snapshot", null: false
     t.integer "price_snapshot_cents", null: false
     t.integer "quantity", null: false
     t.bigint "reference_id", null: false
+    t.datetime "started_at"
     t.datetime "updated_at", null: false
     t.bigint "work_order_id", null: false
     t.index ["item_type"], name: "index_line_items_on_item_type"
@@ -119,6 +121,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_26_211500) do
   end
 
   create_table "work_orders", force: :cascade do |t|
+    t.decimal "average_service_duration_minutes", precision: 8, scale: 2
     t.datetime "completed_at"
     t.datetime "created_at", null: false
     t.bigint "customer_id", null: false

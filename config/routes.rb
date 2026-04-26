@@ -40,6 +40,8 @@ Rails.application.routes.draw do
           post :line_items, action: :add_line_item
           patch :execute
           patch :complete
+          patch "line_items/:line_item_id/start", action: :start_line_item, as: :start_line_item
+          patch "line_items/:line_item_id/finish", action: :finish_line_item, as: :finish_line_item
         end
       end
 
