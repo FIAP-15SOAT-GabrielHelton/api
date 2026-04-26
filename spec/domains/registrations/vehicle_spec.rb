@@ -13,8 +13,7 @@ RSpec.describe Registrations::Vehicle do
       make: "Toyota",
       model: "Corolla",
       year: 2022,
-      color: "Silver",
-      mileage: 15_000
+      color: "Silver"
     }
   end
 
@@ -24,7 +23,6 @@ RSpec.describe Registrations::Vehicle do
 
       expect(vehicle.make).to eq("Toyota")
       expect(vehicle.license_plate).to be_a(Registrations::ValueObjects::LicensePlate)
-      expect(vehicle.mileage).to be_a(Registrations::ValueObjects::Mileage)
       expect(vehicle).to be_active
     end
 
@@ -49,13 +47,6 @@ RSpec.describe Registrations::Vehicle do
       vehicle = described_class.new(**valid_attrs.merge(license_plate: plate))
 
       expect(vehicle.license_plate).to eq(plate)
-    end
-
-    it "accepts Mileage VO directly" do
-      mileage = Registrations::ValueObjects::Mileage.new(20_000)
-      vehicle = described_class.new(**valid_attrs.merge(mileage: mileage))
-
-      expect(vehicle.mileage).to eq(mileage)
     end
   end
 
@@ -92,23 +83,6 @@ RSpec.describe Registrations::Vehicle do
       vehicle.update(color: "Black")
 
       expect(vehicle.make).to eq("Toyota")
-    end
-  end
-
-  describe "#update_mileage" do
-    it "updates to a higher value" do
-      vehicle = described_class.new(**valid_attrs)
-
-      vehicle.update_mileage(20_000)
-
-      expect(vehicle.mileage.value).to eq(20_000)
-    end
-
-    it "rejects lower value" do
-      vehicle = described_class.new(**valid_attrs)
-
-      expect { vehicle.update_mileage(10_000) }
-        .to raise_error(ArgumentError, /Mileage cannot decrease/)
     end
   end
 

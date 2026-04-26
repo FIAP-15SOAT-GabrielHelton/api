@@ -13,7 +13,7 @@ RSpec.describe "Api::V1::WorkOrders admin views", type: :request do
   end
   let(:vehicle_params) do
     { license_plate: "ABC1D23", make: "Honda", model: "Civic",
-      year: 2020, color: "black", mileage: 50_000 }
+      year: 2020, color: "black" }
   end
   let(:service_params) do
     { name: "Oil Change", description: "Full oil change", base_price: 5000, estimated_duration_minutes: 30 }

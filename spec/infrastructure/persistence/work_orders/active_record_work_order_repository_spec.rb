@@ -37,8 +37,7 @@ RSpec.describe Persistence::WorkOrders::ActiveRecordWorkOrderRepository do
         make: "Honda",
         model: "Civic",
         year: 2020,
-        color: "black",
-        mileage: 50_000
+        color: "black"
       )
     )
   end

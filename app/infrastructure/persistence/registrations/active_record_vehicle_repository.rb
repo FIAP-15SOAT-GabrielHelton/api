@@ -54,7 +54,6 @@ module Persistence
           model: record.model,
           year: record.year,
           color: record.color,
-          mileage: record.mileage,
           status: record.status.to_sym
         )
       end
@@ -67,7 +66,6 @@ module Persistence
           model: vehicle.model,
           year: vehicle.year,
           color: vehicle.color,
-          mileage: vehicle.mileage.value,
           status: vehicle.status
         }
       end

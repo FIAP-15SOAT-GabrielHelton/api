@@ -66,9 +66,6 @@
           "color": {
             "type": "string"
           },
-          "mileage": {
-            "type": "integer"
-          },
           "status": {
             "type": "string",
             "enum": [
@@ -91,8 +88,7 @@
           "license_plate",
           "make",
           "model",
-          "year",
-          "mileage"
+          "year"
         ]
       },
       "Service": {
@@ -203,9 +199,8 @@
               "diagnosing",
               "awaiting_approval",
               "approved",
-              "executing",
+              "in_progress",
               "completed",
-              "delivered",
               "rejected"
             ]
           },
@@ -226,11 +221,6 @@
             "nullable": true
           },
           "completed_at": {
-            "type": "string",
-            "format": "date_time",
-            "nullable": true
-          },
-          "delivered_at": {
             "type": "string",
             "format": "date_time",
             "nullable": true

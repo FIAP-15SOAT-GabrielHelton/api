@@ -20,7 +20,7 @@ RSpec.describe Persistence::WorkOrders::ActiveRecordWorkOrderRepository, "#searc
   def create_vehicle_record(customer_id, license_plate: "ABC1D23")
     Persistence::Registrations::VehicleRecord.create!(
       customer_id: customer_id, license_plate: license_plate, make: "Honda",
-      model: "Civic", year: 2020, color: "black", mileage: 50_000
+      model: "Civic", year: 2020, color: "black"
     )
   end
 

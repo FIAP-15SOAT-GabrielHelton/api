@@ -30,8 +30,7 @@ module Api
           make: params[:make],
           model: params[:model],
           year: params[:year],
-          color: params[:color],
-          mileage: params[:mileage] || 0
+          color: params[:color]
         )
 
         if result.success?
@@ -45,19 +44,6 @@ module Api
         result = update_vehicle.call(
           id: params[:id],
           **update_params
-        )
-
-        if result.success?
-          render json: serialize(result.value)
-        else
-          render json: { error: result.error }, status: :unprocessable_entity
-        end
-      end
-
-      def update_mileage
-        result = update_mileage_use_case.call(
-          id: params[:id],
-          mileage: params[:mileage]
         )
 
         if result.success?
@@ -92,10 +78,6 @@ module Api
         Registrations::UpdateVehicle.new(vehicle_repository: vehicle_repository)
       end
 
-      def update_mileage_use_case
-        Registrations::UpdateMileage.new(vehicle_repository: vehicle_repository)
-      end
-
       def find_vehicle(id)
         vehicle = vehicle_repository.find(id)
         return Shared::Result.failure("Vehicle not found") unless vehicle
@@ -121,7 +103,6 @@ module Api
           model: vehicle.model,
           year: vehicle.year,
           color: vehicle.color,
-          mileage: vehicle.mileage.value,
           status: vehicle.status
         }
       end

@@ -12,7 +12,7 @@ RSpec.describe "Api::V1::Tracking", type: :request do
   end
 
   let(:vehicle_params) do
-    { license_plate: "ABC1D23", make: "Honda", model: "Civic", year: 2020, color: "black", mileage: 50_000 }
+    { license_plate: "ABC1D23", make: "Honda", model: "Civic", year: 2020, color: "black" }
   end
 
   let(:service_params) do

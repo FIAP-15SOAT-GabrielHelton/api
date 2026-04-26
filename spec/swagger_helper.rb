@@ -48,12 +48,11 @@ RSpec.configure do |config|
               model: { type: :string },
               year: { type: :integer },
               color: { type: :string },
-              mileage: { type: :integer },
               status: { type: :string, enum: %w[active inactive] },
               created_at: { type: :string, format: :date_time },
               updated_at: { type: :string, format: :date_time }
             },
-            required: %w[id customer_id license_plate make model year mileage]
+            required: %w[id customer_id license_plate make model year]
           },
           Service: {
             type: :object,
@@ -93,13 +92,12 @@ RSpec.configure do |config|
               customer_id: { type: :integer },
               vehicle_id: { type: :integer },
               mechanic_id: { type: :integer, nullable: true },
-              status: { type: :string, enum: %w[received diagnosing awaiting_approval approved executing completed delivered rejected] },
+              status: { type: :string, enum: %w[received diagnosing awaiting_approval approved in_progress completed rejected] },
               description: { type: :string },
               created_at: { type: :string, format: :date_time },
               updated_at: { type: :string, format: :date_time },
               executed_at: { type: :string, format: :date_time, nullable: true },
-              completed_at: { type: :string, format: :date_time, nullable: true },
-              delivered_at: { type: :string, format: :date_time, nullable: true }
+              completed_at: { type: :string, format: :date_time, nullable: true }
             },
             required: %w[id protocol customer_id vehicle_id status description]
           },

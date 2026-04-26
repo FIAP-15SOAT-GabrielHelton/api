@@ -9,7 +9,7 @@ RSpec.describe 'Api::V1::WorkOrders', openapi_spec: 'v1/swagger.json', type: :re
       produces 'application/json'
       security [ { bearerAuth: [] } ]
       parameter name: :status, in: :query, type: :string, required: false,
-                description: 'Filter by status (received, diagnosing, awaiting_approval, approved, in_progress, completed, delivered, rejected)'
+                description: 'Filter by status (received, diagnosing, awaiting_approval, approved, in_progress, completed, rejected)'
       parameter name: :customer_id, in: :query, type: :integer, required: false, description: 'Filter by customer ID'
       parameter name: :mechanic_id, in: :query, type: :integer, required: false, description: 'Filter by mechanic ID'
       parameter name: :page, in: :query, type: :integer, required: false, description: 'Page number'
@@ -220,42 +220,11 @@ RSpec.describe 'Api::V1::WorkOrders', openapi_spec: 'v1/swagger.json', type: :re
   path '/api/v1/work_orders/{id}/complete' do
     patch 'Complete work order (status → completed)' do
       tags 'Work Orders'
-      consumes 'application/json'
       produces 'application/json'
       security [ { bearerAuth: [] } ]
       parameter name: :id, in: :path, type: :integer, required: true
-      parameter name: :body, in: :body, schema: {
-        type: :object,
-        properties: {
-          current_mileage: { type: :integer }
-        },
-        required: %w[current_mileage]
-      }
 
       response '200', 'work order completed' do
-        schema '$ref' => '#/components/schemas/WorkOrder'
-        run_test!
-      end
-
-      response '422', 'unprocessable entity' do
-        schema '$ref' => '#/components/schemas/Error'
-        run_test!
-      end
-
-      response '401', 'unauthorized' do
-        run_test!
-      end
-    end
-  end
-
-  path '/api/v1/work_orders/{id}/deliver' do
-    patch 'Deliver work order (status → delivered)' do
-      tags 'Work Orders'
-      produces 'application/json'
-      security [ { bearerAuth: [] } ]
-      parameter name: :id, in: :path, type: :integer, required: true
-
-      response '200', 'work order delivered' do
         schema '$ref' => '#/components/schemas/WorkOrder'
         run_test!
       end

@@ -45,10 +45,6 @@ describe WorkOrders::ValueObjects::WorkOrderStatus do
       expect(described_class.new(:in_progress).can_transition_to?(:completed)).to be true
     end
 
-    it "allows completed → delivered" do
-      expect(described_class.new(:completed).can_transition_to?(:delivered)).to be true
-    end
-
     it "rejects received → in_progress (skipping diagnosis)" do
       expect(described_class.new(:received).can_transition_to?(:in_progress)).to be false
     end
@@ -61,8 +57,8 @@ describe WorkOrders::ValueObjects::WorkOrderStatus do
       expect(described_class.new(:in_progress).can_transition_to?(:rejected)).to be false
     end
 
-    it "rejects any transition from delivered (terminal)" do
-      expect(described_class.new(:delivered).can_transition_to?(:completed)).to be false
+    it "rejects any transition from completed (terminal)" do
+      expect(described_class.new(:completed).can_transition_to?(:in_progress)).to be false
     end
 
     it "rejects any transition from rejected (terminal)" do
@@ -88,8 +84,8 @@ describe WorkOrders::ValueObjects::WorkOrderStatus do
   end
 
   describe "#terminal?" do
-    it "returns true for delivered" do
-      expect(described_class.new(:delivered).terminal?).to be true
+    it "returns true for completed" do
+      expect(described_class.new(:completed).terminal?).to be true
     end
 
     it "returns true for rejected" do
