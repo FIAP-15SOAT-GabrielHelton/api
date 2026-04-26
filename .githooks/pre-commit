@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -e
+
+# Regenerate swagger/v1/swagger.json if any request spec or swagger_helper changed
+if git diff --cached --name-only | grep -qE '^spec/(requests/.*_spec\.rb|swagger_helper\.rb)$'; then
+  echo "→ Swagger spec changed — regenerating swagger/v1/swagger.json"
+  bundle exec rake rswag:specs:swaggerize
+  git add swagger/v1/swagger.json
+fi
