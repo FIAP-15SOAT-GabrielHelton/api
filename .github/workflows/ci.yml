@@ -5,6 +5,9 @@ on:
   push:
     branches: [ main ]
 
+permissions:
+  contents: read
+
 jobs:
   scan_ruby:
     runs-on: ubuntu-latest
@@ -27,6 +30,7 @@ jobs:
   scan_extra:
     runs-on: ubuntu-latest
     permissions:
+      contents: read
       security-events: write
 
     steps:
