@@ -52,7 +52,7 @@ jobs:
         with:
           config: >-
             p/ruby
-            p/rails
+            p/security-audit
         continue-on-error: true
 
   lint:

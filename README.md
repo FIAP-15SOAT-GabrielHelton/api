@@ -436,7 +436,7 @@ Scanner de container e filesystem que detecta vulnerabilidades em camadas do Doc
 #### Semgrep
 Engine de pattern matching que executa regras comunitárias de segurança.
 
-- **O que procura:** Usa rulesets comunitários `p/ruby` e `p/rails`, detectando:
+- **O que procura:** Usa rulesets comunitários `p/ruby` e `p/security-audit`, detectando:
   - SQL injection (mesmo em queries dinamicamente construídas)
   - Path traversal (`File.read(user_input)`)
   - Insecure randomness (`rand()` vs `SecureRandom`)
