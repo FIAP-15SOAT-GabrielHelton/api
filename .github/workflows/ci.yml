@@ -39,13 +39,28 @@ jobs:
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
+        id: trivy
         with:
           scan-type: fs
           scan-ref: .
-          format: table
+          format: json
+          output: trivy-results.json
           severity: CRITICAL,HIGH,MEDIUM
           scanners: vuln,misconfig
         continue-on-error: true
+
+      - name: Check Trivy results and output warning
+        if: always()
+        run: |
+          if [ -f trivy-results.json ]; then
+            VULN_COUNT=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="HIGH" or .Severity=="CRITICAL")] | length' trivy-results.json 2>/dev/null || echo 0)
+            MISCONFIG_COUNT=$(jq '[.Results[]?.Misconfigurations[]? | select(.Severity=="HIGH" or .Severity=="CRITICAL")] | length' trivy-results.json 2>/dev/null || echo 0)
+            TOTAL=$((VULN_COUNT + MISCONFIG_COUNT))
+
+            if [ "$TOTAL" -gt 0 ]; then
+              echo "::warning::Trivy found $VULN_COUNT HIGH/CRITICAL vulnerabilities and $MISCONFIG_COUNT HIGH/CRITICAL misconfigurations"
+            fi
+          fi
 
       - name: Run Semgrep
         uses: semgrep/semgrep-action@v1
