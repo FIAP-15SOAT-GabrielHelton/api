@@ -58,7 +58,8 @@ jobs:
             TOTAL=$((VULN_COUNT + MISCONFIG_COUNT))
 
             if [ "$TOTAL" -gt 0 ]; then
-              echo "::warning::Trivy found $VULN_COUNT HIGH/CRITICAL vulnerabilities and $MISCONFIG_COUNT HIGH/CRITICAL misconfigurations"
+              echo "::error::Trivy found $VULN_COUNT HIGH/CRITICAL vulnerabilities and $MISCONFIG_COUNT HIGH/CRITICAL misconfigurations"
+              exit 1
             fi
           fi
 
