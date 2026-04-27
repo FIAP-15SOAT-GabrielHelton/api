@@ -104,6 +104,176 @@ semgrep_color = get_badge_color(semgrep_count)
 
 timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
+# Helper functions for building sections
+def build_audit_section():
+    if audit_count == 0:
+        return '<div class="empty-state">✓ No vulnerabilities detected</div>'
+
+    rows = []
+    for v in audit_data.get('vulnerabilities', []):
+        rows.append(f"""<tr>
+            <td><span class="code">{safe_html(v.get('gem', 'N/A'))}</span></td>
+            <td>{safe_html(v.get('version', 'N/A'))}</td>
+            <td>{safe_html(v.get('advisory_id', 'N/A'))}</td>
+            <td>{safe_html(v.get('cve', 'N/A') or 'N/A')}</td>
+            <td><span class="severity-critical">{safe_html(v.get('severity', 'UNKNOWN'))}</span></td>
+            <td>{safe_html(v.get('title', 'N/A'))}</td>
+        </tr>""")
+
+    return f"""<table>
+        <thead>
+            <tr>
+                <th>Gem</th>
+                <th>Version</th>
+                <th>Advisory</th>
+                <th>CVE</th>
+                <th>Severity</th>
+                <th>Summary</th>
+            </tr>
+        </thead>
+        <tbody>
+            {''.join(rows)}
+        </tbody>
+    </table>"""
+
+def build_brakeman_section():
+    if brakeman_count == 0:
+        return '<div class="empty-state">✓ No warnings detected</div>'
+
+    rows = []
+    for w in brakeman_data.get('warnings', []):
+        rows.append(f"""<tr>
+            <td><span class="code">{safe_html(w.get('file', 'N/A'))}</span></td>
+            <td>{safe_html(str(w.get('line', 'N/A')))}</td>
+            <td>{safe_html(w.get('warning_type', 'N/A'))}</td>
+            <td><span class="severity-{w.get('confidence', 'low').lower()}">{safe_html(w.get('confidence', 'N/A'))}</span></td>
+            <td>{safe_html(w.get('message', 'N/A'))}</td>
+        </tr>""")
+
+    return f"""<table>
+        <thead>
+            <tr>
+                <th>File</th>
+                <th>Line</th>
+                <th>Type</th>
+                <th>Confidence</th>
+                <th>Message</th>
+            </tr>
+        </thead>
+        <tbody>
+            {''.join(rows)}
+        </tbody>
+    </table>"""
+
+def build_trivy_section():
+    if trivy_count == 0:
+        return '<div class="empty-state">✓ No issues detected</div>'
+
+    sections = []
+    for r in trivy_results:
+        target = safe_html(r.get('Target', 'Unknown Target'))
+        vulns = r.get('Vulnerabilities', [])
+        misconfigs = r.get('Misconfigurations', [])
+
+        section = f'<h3>{target}</h3>'
+
+        if vulns:
+            vuln_rows = []
+            for v in vulns:
+                vuln_rows.append(f"""<tr>
+                    <td><span class="code">{safe_html(v.get('VulnerabilityID', 'N/A'))}</span></td>
+                    <td>{safe_html(v.get('PkgName', 'N/A'))}</td>
+                    <td>{safe_html(v.get('InstalledVersion', 'N/A'))}</td>
+                    <td>{safe_html(v.get('FixedVersion', 'N/A') or 'N/A')}</td>
+                    <td><span class="severity-{v.get('Severity', 'unknown').lower()}">{safe_html(v.get('Severity', 'UNKNOWN'))}</span></td>
+                    <td>{safe_html(v.get('Description', 'N/A')[:100])}</td>
+                </tr>""")
+
+            section += f"""<h4>Vulnerabilities</h4>
+            <table>
+                <thead>
+                    <tr>
+                        <th>CVE ID</th>
+                        <th>Package</th>
+                        <th>Installed</th>
+                        <th>Fixed</th>
+                        <th>Severity</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {''.join(vuln_rows)}
+                </tbody>
+            </table>"""
+        else:
+            section += '<div class="empty-state">No vulnerabilities</div>'
+
+        if misconfigs:
+            misconf_rows = []
+            for m in misconfigs:
+                misconf_rows.append(f"""<tr>
+                    <td><span class="code">{safe_html(m.get('ID', 'N/A'))}</span></td>
+                    <td><span class="severity-{m.get('Severity', 'unknown').lower()}">{safe_html(m.get('Severity', 'UNKNOWN'))}</span></td>
+                    <td>{safe_html(m.get('Title', 'N/A'))}</td>
+                    <td>{safe_html(m.get('Description', 'N/A')[:100])}</td>
+                </tr>""")
+
+            section += f"""<h4>Misconfigurations</h4>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Severity</th>
+                        <th>Title</th>
+                        <th>Message</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {''.join(misconf_rows)}
+                </tbody>
+            </table>"""
+        else:
+            section += '<div class="empty-state">No misconfigurations</div>'
+
+        sections.append(section)
+
+    return ''.join(sections)
+
+def build_semgrep_section():
+    if semgrep_count == 0:
+        return '<div class="empty-state">✓ No findings detected</div>'
+
+    rows = []
+    for f in semgrep_data.get('results', []):
+        line = f.get('start', {}).get('line', 'N/A') if isinstance(f.get('start'), dict) else 'N/A'
+        rows.append(f"""<tr>
+            <td><span class="code">{safe_html(f.get('path', 'N/A'))}</span></td>
+            <td>{safe_html(str(line))}</td>
+            <td><span class="code">{safe_html(f.get('rule_id', 'N/A'))}</span></td>
+            <td><span class="severity-{f.get('severity', 'info').lower()}">{safe_html(f.get('severity', 'INFO'))}</span></td>
+            <td>{safe_html(f.get('message', 'N/A'))}</td>
+        </tr>""")
+
+    return f"""<table>
+        <thead>
+            <tr>
+                <th>File</th>
+                <th>Line</th>
+                <th>Rule ID</th>
+                <th>Severity</th>
+                <th>Message</th>
+            </tr>
+        </thead>
+        <tbody>
+            {''.join(rows)}
+        </tbody>
+    </table>"""
+
+audit_section = build_audit_section()
+brakeman_section = build_brakeman_section()
+trivy_section = build_trivy_section()
+semgrep_section = build_semgrep_section()
+
 html_content = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -189,6 +359,13 @@ html_content = f"""<!DOCTYPE html>
             color: #666;
             font-weight: 600;
         }}
+        .section h4 {{
+            font-size: 12px;
+            margin-top: 12px;
+            margin-bottom: 8px;
+            color: #666;
+            font-weight: 600;
+        }}
         table {{
             width: 100%;
             border-collapse: collapse;
@@ -208,6 +385,7 @@ html_content = f"""<!DOCTYPE html>
         td {{
             padding: 10px;
             border-bottom: 1px solid #dee2e6;
+            word-break: break-word;
         }}
         tr:nth-child(even) {{
             background: #f9f9f9;
@@ -229,6 +407,9 @@ html_content = f"""<!DOCTYPE html>
         }}
         .severity-info {{
             color: #17a2b8;
+        }}
+        .severity-unknown {{
+            color: #999;
         }}
         .empty-state {{
             padding: 20px;
@@ -286,132 +467,29 @@ html_content = f"""<!DOCTYPE html>
         <!-- bundler-audit Section -->
         <section class="section">
             <h2>📦 Dependency Vulnerabilities (bundler-audit)</h2>
-            {f'''<div class="summary">Scans Gemfile.lock for known CVEs in gem dependencies.</div>
-            {('''<table>
-                <thead>
-                    <tr>
-                        <th>Gem</th>
-                        <th>Version</th>
-                        <th>Advisory</th>
-                        <th>CVE</th>
-                        <th>Severity</th>
-                        <th>Summary</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {"".join(f"""<tr>
-                        <td><span class="code">{safe_html(v.get('gem', 'N/A'))}</span></td>
-                        <td>{safe_html(v.get('version', 'N/A'))}</td>
-                        <td>{safe_html(v.get('advisory_id', 'N/A'))}</td>
-                        <td>{safe_html(v.get('cve', 'N/A') or 'N/A')}</td>
-                        <td><span class="severity-critical">{safe_html(v.get('severity', 'UNKNOWN'))}</span></td>
-                        <td>{safe_html(v.get('title', 'N/A'))}</td>
-                    </tr>""" for v in audit_data.get('vulnerabilities', []))}
-                </tbody>
-            </table>''' if audit_count > 0 else '''<div class="empty-state">✓ No vulnerabilities detected</div>''')}''' if audit_data else '''<div class="empty-state">⚠ No audit data available</div>'''}
+            <div class="summary">Scans Gemfile.lock for known CVEs in gem dependencies.</div>
+            {audit_section}
         </section>
 
         <!-- brakeman Section -->
         <section class="section">
             <h2>🛡️ Static Analysis (brakeman)</h2>
-            {f'''<div class="summary">Scans Ruby on Rails code for common security issues.</div>
-            {('''<table>
-                <thead>
-                    <tr>
-                        <th>File</th>
-                        <th>Line</th>
-                        <th>Type</th>
-                        <th>Confidence</th>
-                        <th>Message</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {"".join(f"""<tr>
-                        <td><span class="code">{safe_html(w.get('file', 'N/A'))}</span></td>
-                        <td>{safe_html(str(w.get('line', 'N/A')))}</td>
-                        <td>{safe_html(w.get('warning_type', 'N/A'))}</td>
-                        <td><span class="severity-{w.get('confidence', 'low').lower()}">{safe_html(w.get('confidence', 'N/A'))}</span></td>
-                        <td>{safe_html(w.get('message', 'N/A'))}</td>
-                    </tr>""" for w in brakeman_data.get('warnings', []))}
-                </tbody>
-            </table>''' if brakeman_count > 0 else '''<div class="empty-state">✓ No warnings detected</div>''')}''' if brakeman_data else '''<div class="empty-state">⚠ No brakeman data available</div>'''}
+            <div class="summary">Scans Ruby on Rails code for common security issues.</div>
+            {brakeman_section}
         </section>
 
         <!-- Trivy Section -->
         <section class="section">
             <h2>🔍 Container & Dependency Scanning (Trivy)</h2>
-            {f'''<div class="summary">Scans OS packages, base image, and configuration mismatches.</div>
-            {('''<div>''' + "".join(f'''
-                <h3>{safe_html(r.get('Target', 'Unknown Target'))}</h3>
-                {('''<h4>Vulnerabilities</h4>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>CVE ID</th>
-                            <th>Package</th>
-                            <th>Installed</th>
-                            <th>Fixed</th>
-                            <th>Severity</th>
-                            <th>Description</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {"".join(f"""<tr>
-                            <td><span class="code">{safe_html(v.get('VulnerabilityID', 'N/A'))}</span></td>
-                            <td>{safe_html(v.get('PkgName', 'N/A'))}</td>
-                            <td>{safe_html(v.get('InstalledVersion', 'N/A'))}</td>
-                            <td>{safe_html(v.get('FixedVersion', 'N/A') or 'N/A')}</td>
-                            <td><span class="severity-{v.get('Severity', 'unknown').lower()}">{safe_html(v.get('Severity', 'UNKNOWN'))}</span></td>
-                            <td>{safe_html(v.get('Description', 'N/A')[:100])}</td>
-                        </tr>""" for v in r.get('Vulnerabilities', []))}
-                    </tbody>
-                </table>''' if r.get('Vulnerabilities') else '''<div class="empty-state">No vulnerabilities</div>''')}
-                {('''<h4>Misconfigurations</h4>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Severity</th>
-                            <th>Title</th>
-                            <th>Message</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {"".join(f"""<tr>
-                            <td><span class="code">{safe_html(m.get('ID', 'N/A'))}</span></td>
-                            <td><span class="severity-{m.get('Severity', 'unknown').lower()}">{safe_html(m.get('Severity', 'UNKNOWN'))}</span></td>
-                            <td>{safe_html(m.get('Title', 'N/A'))}</td>
-                            <td>{safe_html(m.get('Description', 'N/A')[:100])}</td>
-                        </tr>""" for m in r.get('Misconfigurations', []))}
-                    </tbody>
-                </table>''' if r.get('Misconfigurations') else '''<div class="empty-state">No misconfigurations</div>''')}
-            ''' for r in trivy_results) + '''</div>''' if trivy_results else '''<div class="empty-state">✓ No issues detected</div>''')}''' if trivy_data else '''<div class="empty-state">⚠ No Trivy data available</div>'''}
+            <div class="summary">Scans OS packages, base image, and configuration mismatches.</div>
+            {trivy_section}
         </section>
 
         <!-- Semgrep Section -->
         <section class="section">
             <h2>🔬 Pattern Matching (Semgrep)</h2>
-            {f'''<div class="summary">Scans code against Ruby and Rails security patterns.</div>
-            {('''<table>
-                <thead>
-                    <tr>
-                        <th>File</th>
-                        <th>Line</th>
-                        <th>Rule ID</th>
-                        <th>Severity</th>
-                        <th>Message</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {"".join(f"""<tr>
-                        <td><span class="code">{safe_html(f.get('path', 'N/A'))}</span></td>
-                        <td>{safe_html(str(f.get('start', {{}})).get('line', 'N/A'))}</td>
-                        <td><span class="code">{safe_html(f.get('rule_id', 'N/A'))}</span></td>
-                        <td><span class="severity-{f.get('severity', 'info').lower()}">{safe_html(f.get('severity', 'INFO'))}</span></td>
-                        <td>{safe_html(f.get('message', 'N/A'))}</td>
-                    </tr>""" for f in semgrep_data.get('results', []))}
-                </tbody>
-            </table>''' if semgrep_count > 0 else '''<div class="empty-state">✓ No findings detected</div>''')}''' if semgrep_data else '''<div class="empty-state">⚠ No Semgrep data available</div>'''}
+            <div class="summary">Scans code against Ruby and Rails security patterns.</div>
+            {semgrep_section}
         </section>
     </div>
 </body>
