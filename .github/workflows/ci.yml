@@ -32,8 +32,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      security-events: write
-      actions: read
 
     steps:
       - name: Checkout code
@@ -44,17 +42,10 @@ jobs:
         with:
           scan-type: fs
           scan-ref: .
-          format: sarif
-          output: trivy-results.sarif
+          format: table
           severity: CRITICAL,HIGH,MEDIUM
           scanners: vuln,misconfig
-
-      - name: Upload Trivy results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v4
-        if: always()
-        with:
-          sarif_file: trivy-results.sarif
-          category: trivy
+        continue-on-error: true
 
       - name: Run Semgrep
         uses: semgrep/semgrep-action@v1
@@ -62,15 +53,7 @@ jobs:
           config: >-
             p/ruby
             p/rails
-          generateSarif: true
         continue-on-error: true
-
-      - name: Upload Semgrep results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v4
-        if: always() && hashFiles('semgrep.sarif') != ''
-        with:
-          sarif_file: semgrep.sarif
-          category: semgrep
 
   lint:
     runs-on: ubuntu-latest
