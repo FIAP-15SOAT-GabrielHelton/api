@@ -30,7 +30,7 @@ RSpec.describe "Api::V1::Services", type: :request do
       post "/api/v1/services", params: valid_params, headers: auth_headers, as: :json
       post "/api/v1/services", params: valid_params, headers: auth_headers, as: :json
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
 
       body = response.parsed_body
       expect(body["error"]).to eq("Service name already registered")
@@ -39,7 +39,7 @@ RSpec.describe "Api::V1::Services", type: :request do
     it "returns 422 with negative base_price" do
       post "/api/v1/services", params: valid_params.merge(base_price: -100), headers: auth_headers, as: :json
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
     end
   end
 
@@ -104,7 +104,7 @@ RSpec.describe "Api::V1::Services", type: :request do
     it "returns 422 when service not found" do
       patch "/api/v1/services/999999", params: { name: "Test" }, headers: auth_headers, as: :json
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
     end
   end
 
@@ -126,14 +126,14 @@ RSpec.describe "Api::V1::Services", type: :request do
       delete "/api/v1/services/#{service_id}", headers: auth_headers, as: :json
       delete "/api/v1/services/#{service_id}", headers: auth_headers, as: :json
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
       expect(response.parsed_body["error"]).to match(/already inactive/)
     end
 
     it "returns 422 when service not found" do
       delete "/api/v1/services/999999", headers: auth_headers, as: :json
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
     end
   end
 end

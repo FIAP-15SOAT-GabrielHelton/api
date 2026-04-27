@@ -40,20 +40,20 @@ RSpec.describe "Api::V1::InventoryItems", type: :request do
       post "/api/v1/inventory_items", params: valid_params, headers: auth_headers, as: :json
       post "/api/v1/inventory_items", params: valid_params.merge(name: "Other"), headers: auth_headers, as: :json
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
       expect(response.parsed_body["error"]).to eq("Inventory item code already registered")
     end
 
     it "returns 422 with negative unit_price" do
       post "/api/v1/inventory_items", params: valid_params.merge(unit_price: -100), headers: auth_headers, as: :json
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
     end
 
     it "returns 422 with negative quantity" do
       post "/api/v1/inventory_items", params: valid_params.merge(quantity: -1), headers: auth_headers, as: :json
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
     end
 
     it "defaults quantity and minimum_quantity to zero when omitted" do
@@ -139,7 +139,7 @@ RSpec.describe "Api::V1::InventoryItems", type: :request do
     it "returns 422 when item not found" do
       patch "/api/v1/inventory_items/999999", params: { name: "Test" }, headers: auth_headers, as: :json
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
     end
   end
 
@@ -161,14 +161,14 @@ RSpec.describe "Api::V1::InventoryItems", type: :request do
       delete "/api/v1/inventory_items/#{item_id}", headers: auth_headers, as: :json
       delete "/api/v1/inventory_items/#{item_id}", headers: auth_headers, as: :json
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
       expect(response.parsed_body["error"]).to match(/already inactive/)
     end
 
     it "returns 422 when item not found" do
       delete "/api/v1/inventory_items/999999", headers: auth_headers, as: :json
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
     end
   end
 
@@ -191,7 +191,7 @@ RSpec.describe "Api::V1::InventoryItems", type: :request do
 
       patch "/api/v1/inventory_items/#{item_id}/add_quantity", params: { amount: 0 }, headers: auth_headers, as: :json
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
     end
 
     it "returns 422 when amount is negative" do
@@ -200,13 +200,13 @@ RSpec.describe "Api::V1::InventoryItems", type: :request do
 
       patch "/api/v1/inventory_items/#{item_id}/add_quantity", params: { amount: -3 }, headers: auth_headers, as: :json
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
     end
 
     it "returns 422 when item not found" do
       patch "/api/v1/inventory_items/999999/add_quantity", params: { amount: 5 }, headers: auth_headers, as: :json
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
     end
   end
 
@@ -229,7 +229,7 @@ RSpec.describe "Api::V1::InventoryItems", type: :request do
 
       patch "/api/v1/inventory_items/#{item_id}/decrease_quantity", params: { amount: 50 }, headers: auth_headers, as: :json
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
       expect(response.parsed_body["error"]).to match(/Insufficient stock/)
     end
 
@@ -239,13 +239,13 @@ RSpec.describe "Api::V1::InventoryItems", type: :request do
 
       patch "/api/v1/inventory_items/#{item_id}/decrease_quantity", params: { amount: 0 }, headers: auth_headers, as: :json
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
     end
 
     it "returns 422 when item not found" do
       patch "/api/v1/inventory_items/999999/decrease_quantity", params: { amount: 5 }, headers: auth_headers, as: :json
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
     end
   end
 end

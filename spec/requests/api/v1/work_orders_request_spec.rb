@@ -68,7 +68,7 @@ RSpec.describe "Api::V1::WorkOrders", type: :request do
            params: { customer_id: 999_999, vehicle_id: vehicle_id, problem_description: "x" },
            headers: auth_headers, as: :json
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
       expect(response.parsed_body["error"]).to eq("Customer not found")
     end
 
@@ -79,7 +79,7 @@ RSpec.describe "Api::V1::WorkOrders", type: :request do
            params: { customer_id: customer_id, vehicle_id: 999_999, problem_description: "x" },
            headers: auth_headers, as: :json
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
       expect(response.parsed_body["error"]).to eq("Vehicle not found")
     end
 
@@ -91,7 +91,7 @@ RSpec.describe "Api::V1::WorkOrders", type: :request do
            params: { customer_id: customer_id, vehicle_id: vehicle_id },
            headers: auth_headers, as: :json
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
     end
   end
 
@@ -200,7 +200,7 @@ RSpec.describe "Api::V1::WorkOrders", type: :request do
            params: { item_type: "service", reference_id: service_id, quantity: 1 },
            headers: auth_headers, as: :json
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
     end
   end
 
@@ -229,7 +229,7 @@ RSpec.describe "Api::V1::WorkOrders", type: :request do
 
       patch "/api/v1/work_orders/#{wo_id}/diagnose", headers: auth_headers, as: :json
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
     end
   end
 
@@ -307,7 +307,7 @@ RSpec.describe "Api::V1::WorkOrders", type: :request do
 
       patch "/api/v1/work_orders/#{wo_id}/execute", headers: auth_headers, as: :json
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
     end
   end
 
@@ -332,7 +332,7 @@ RSpec.describe "Api::V1::WorkOrders", type: :request do
 
       patch "/api/v1/work_orders/#{ids[:wo_id]}/line_items/#{line_item_id}/start", headers: auth_headers, as: :json
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
     end
 
     it "rejects finish when service has not been started" do
@@ -342,7 +342,7 @@ RSpec.describe "Api::V1::WorkOrders", type: :request do
 
       patch "/api/v1/work_orders/#{ids[:wo_id]}/line_items/#{line_item_id}/finish", headers: auth_headers, as: :json
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
     end
 
     it "auto-completes the work order when the last service is finished" do
