@@ -239,4 +239,52 @@ RSpec.describe 'Api::V1::WorkOrders', openapi_spec: 'v1/swagger.json', type: :re
       end
     end
   end
+
+  path '/api/v1/work_orders/{id}/line_items/{line_item_id}/start' do
+    patch 'Start a service line item' do
+      tags 'Work Orders'
+      produces 'application/json'
+      security [ { bearerAuth: [] } ]
+      parameter name: :id, in: :path, type: :integer, required: true
+      parameter name: :line_item_id, in: :path, type: :integer, required: true
+
+      response '200', 'service started' do
+        schema '$ref' => '#/components/schemas/WorkOrder'
+        run_test!
+      end
+
+      response '422', 'unprocessable entity' do
+        schema '$ref' => '#/components/schemas/Error'
+        run_test!
+      end
+
+      response '401', 'unauthorized' do
+        run_test!
+      end
+    end
+  end
+
+  path '/api/v1/work_orders/{id}/line_items/{line_item_id}/finish' do
+    patch 'Finish a service line item (auto-completes the work order when last service finishes)' do
+      tags 'Work Orders'
+      produces 'application/json'
+      security [ { bearerAuth: [] } ]
+      parameter name: :id, in: :path, type: :integer, required: true
+      parameter name: :line_item_id, in: :path, type: :integer, required: true
+
+      response '200', 'service finished' do
+        schema '$ref' => '#/components/schemas/WorkOrder'
+        run_test!
+      end
+
+      response '422', 'unprocessable entity' do
+        schema '$ref' => '#/components/schemas/Error'
+        run_test!
+      end
+
+      response '401', 'unauthorized' do
+        run_test!
+      end
+    end
+  end
 end

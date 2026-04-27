@@ -207,16 +207,42 @@ describe WorkOrders::WorkOrder do
   end
 
   describe "#complete" do
-    it "transitions in_progress → completed" do
-      wo = described_class.new(**valid_attrs.merge(status: :in_progress))
+    let(:ready_service) do
+      WorkOrders::LineItem.new(
+        id: 1, item_type: :service, reference_id: 1, name_snapshot: "Oil",
+        price_snapshot: 5_000, quantity: 1,
+        started_at: Time.now - 600, finished_at: Time.now
+      )
+    end
+
+    it "transitions in_progress → completed when all services are ready" do
+      wo = described_class.new(**valid_attrs.merge(status: :in_progress, line_items: [ ready_service ]))
 
       wo.complete
 
       expect(wo.completed?).to be true
+      expect(wo.total_execution_time_minutes).to be_within(0.1).of(10.0)
+      expect(wo.average_service_duration_minutes).to be_within(0.1).of(10.0)
+    end
+
+    it "raises InvalidTransition when there is a service still pending" do
+      pending_service = WorkOrders::LineItem.new(
+        id: 2, item_type: :service, reference_id: 2, name_snapshot: "Brake",
+        price_snapshot: 8_000, quantity: 1
+      )
+      wo = described_class.new(**valid_attrs.merge(status: :in_progress, line_items: [ ready_service, pending_service ]))
+
+      expect { wo.complete }.to raise_error(WorkOrders::WorkOrder::InvalidTransition, /All services/)
+    end
+
+    it "raises InvalidTransition when there are no services" do
+      wo = described_class.new(**valid_attrs.merge(status: :in_progress, line_items: []))
+
+      expect { wo.complete }.to raise_error(WorkOrders::WorkOrder::InvalidTransition, /All services/)
     end
 
     it "rejects complete from non-in_progress status" do
-      wo = described_class.new(**valid_attrs.merge(status: :approved))
+      wo = described_class.new(**valid_attrs.merge(status: :approved, line_items: [ ready_service ]))
 
       expect { wo.complete }.to raise_error(/Invalid transition/)
     end

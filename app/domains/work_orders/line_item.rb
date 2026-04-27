@@ -7,9 +7,13 @@ module WorkOrders
   class LineItem < Shared::Entity
     ITEM_TYPES = %i[service part].freeze
 
-    attr_reader :item_type, :reference_id, :name_snapshot, :price_snapshot, :quantity
+    class InvalidTransition < StandardError; end
 
-    def initialize(id:, item_type:, reference_id:, name_snapshot:, price_snapshot:, quantity:)
+    attr_reader :item_type, :reference_id, :name_snapshot, :price_snapshot, :quantity,
+                :started_at, :finished_at
+
+    def initialize(id:, item_type:, reference_id:, name_snapshot:, price_snapshot:, quantity:,
+                   started_at: nil, finished_at: nil)
       super(id: id)
       @item_type = validate_item_type!(item_type)
       @reference_id = reference_id
@@ -17,6 +21,9 @@ module WorkOrders
       @price_snapshot = ensure_price(price_snapshot)
       @quantity = Integer(quantity)
       raise ArgumentError, "Quantity must be positive" unless @quantity.positive?
+
+      @started_at = started_at
+      @finished_at = finished_at
     end
 
     def service?
@@ -25,6 +32,38 @@ module WorkOrders
 
     def part?
       item_type == :part
+    end
+
+    def pending?
+      service? && started_at.nil?
+    end
+
+    def in_progress?
+      service? && !started_at.nil? && finished_at.nil?
+    end
+
+    def ready?
+      service? && !finished_at.nil?
+    end
+
+    def start!
+      raise InvalidTransition, "Only service items can be started" unless service?
+      raise InvalidTransition, "Service has already been started" unless pending?
+
+      @started_at = Time.current
+    end
+
+    def finish!
+      raise InvalidTransition, "Only service items can be finished" unless service?
+      raise InvalidTransition, "Service must be in progress to be finished" unless in_progress?
+
+      @finished_at = Time.current
+    end
+
+    def duration_minutes
+      return nil unless ready?
+
+      ((finished_at - started_at) / 60.0)
     end
 
     def subtotal
