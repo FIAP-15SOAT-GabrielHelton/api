@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# Idempotent seed for the oficina_mecanica project.
+# Idempotent demo seed for the oficina_mecanica project.
 #
 # Creates users, customers, vehicles, the service catalog, the inventory and a
 # small set of WorkOrders distributed across the lifecycle (`received`,
@@ -8,7 +8,13 @@
 # demonstrated end-to-end without manual setup. All writes go through the
 # Application use cases — running this seed doubles as an integration smoke test.
 #
+# Skipped in the test environment: tests rely on factories and an empty database.
 # Override credentials with SEED_ADMIN_PASSWORD / SEED_MECHANIC_PASSWORD.
+
+if Rails.env.test?
+  puts "Seed: skipped in test environment."
+  return
+end
 
 # === Helpers ===============================================================
 
