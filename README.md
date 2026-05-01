@@ -70,16 +70,153 @@ resetar tudo do zero:
 docker compose run --rm web bin/rails db:drop db:create db:migrate db:seed
 ```
 
-### Fluxo completo via HTTP
+### Fluxo completo via HTTP (passo a passo)
 
-O arquivo [`docs/demo.http`](docs/demo.http) contém uma coleção pronta de
-requests cobrindo o fluxo end-to-end (login → criar OS → diagnosticar → aprovar
-orçamento → executar → completar). Abra-o no VSCode com a extensão
-[REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client)
-ou no IntelliJ HTTP Client e clique em "Send Request" em cada bloco.
+Os comandos `curl` abaixo cobrem o ciclo de vida completo de uma Ordem de Serviço:
+do recebimento do cliente na recepção até a entrega do veículo finalizado. Os
+IDs usados (`customer_id=2`, `vehicle_id=3`) correspondem à Maria Souza /
+Toyota Corolla criados pela seed — confirme no resumo impresso ao final do
+`db:seed`.
 
-Como alternativa visual, a UI do Swagger fica em
-[`http://localhost:3000/api-docs`](http://localhost:3000/api-docs).
+Para visualizar a API de forma interativa em vez do `curl`, abra o Swagger UI
+em [`http://localhost:3000/api-docs`](http://localhost:3000/api-docs).
+
+#### 1. Login (admin) — obtém o `access_token`
+
+```bash
+curl -X POST http://localhost:3000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@oficina.local","password":"oficina123"}'
+```
+
+Copie o valor de `access_token` da resposta. Os próximos passos usam esse
+token no header `Authorization: Bearer <TOKEN>`.
+
+#### 2. (Opcional) Inspecionar dados pré-carregados
+
+```bash
+# Substitua <TOKEN> pelo access_token obtido no passo 1
+curl http://localhost:3000/api/v1/services           -H "Authorization: Bearer <TOKEN>"
+curl http://localhost:3000/api/v1/inventory_items    -H "Authorization: Bearer <TOKEN>"
+curl http://localhost:3000/api/v1/work_orders        -H "Authorization: Bearer <TOKEN>"
+curl http://localhost:3000/api/v1/admin/metrics      -H "Authorization: Bearer <TOKEN>"
+```
+
+#### 3. Criar uma nova Ordem de Serviço — status `received`
+
+A atendente recebe o cliente e abre a OS:
+
+```bash
+curl -X POST http://localhost:3000/api/v1/work_orders \
+  -H "Authorization: Bearer <TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": 2,
+    "vehicle_id": 3,
+    "problem_description": "Carro morrendo no semáforo, possível problema na injeção eletrônica."
+  }'
+```
+
+Anote o `data.id` da resposta como `<WORK_ORDER_ID>` para os próximos passos.
+
+#### 4. Mecânico assume a OS — status `received` → `diagnosing`
+
+```bash
+curl -X PATCH http://localhost:3000/api/v1/work_orders/<WORK_ORDER_ID>/assign \
+  -H "Authorization: Bearer <TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"mechanic_id": 2}'
+```
+
+#### 5. Adicionar serviços e peças durante o diagnóstico
+
+```bash
+# Service: Diagnóstico eletrônico (reference_id=5)
+curl -X POST http://localhost:3000/api/v1/work_orders/<WORK_ORDER_ID>/line_items \
+  -H "Authorization: Bearer <TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"item_type":"service","reference_id":5,"quantity":1}'
+
+# Part: Velas de ignição (reference_id=8, qty=4)
+curl -X POST http://localhost:3000/api/v1/work_orders/<WORK_ORDER_ID>/line_items \
+  -H "Authorization: Bearer <TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"item_type":"part","reference_id":8,"quantity":4}'
+```
+
+> Os IDs `5` e `8` são exemplos. Confirme via `GET /api/v1/services` e
+> `GET /api/v1/inventory_items` (passo 2) os IDs reais no seu banco.
+
+#### 6. Diagnosticar — status `diagnosing` → `awaiting_approval` (cria Quote automaticamente)
+
+```bash
+curl -X PATCH http://localhost:3000/api/v1/work_orders/<WORK_ORDER_ID>/diagnose \
+  -H "Authorization: Bearer <TOKEN>"
+```
+
+Para obter o `id` do Quote criado, consulte os detalhes da OS:
+
+```bash
+curl http://localhost:3000/api/v1/work_orders/<WORK_ORDER_ID> \
+  -H "Authorization: Bearer <TOKEN>"
+```
+
+Anote o `quote.id` como `<QUOTE_ID>`.
+
+#### 7. Enviar o orçamento ao cliente — Quote `created` → `sent`
+
+```bash
+curl -X PATCH http://localhost:3000/api/v1/quotes/<QUOTE_ID>/send_to_customer \
+  -H "Authorization: Bearer <TOKEN>"
+```
+
+#### 8. Cliente aprova — Quote `approved`, WO `awaiting_approval` → `approved`, estoque é decrementado
+
+```bash
+curl -X PATCH http://localhost:3000/api/v1/quotes/<QUOTE_ID>/approve \
+  -H "Authorization: Bearer <TOKEN>"
+```
+
+#### 9. Iniciar execução — status `approved` → `in_progress`
+
+```bash
+curl -X PATCH http://localhost:3000/api/v1/work_orders/<WORK_ORDER_ID>/execute \
+  -H "Authorization: Bearer <TOKEN>"
+```
+
+#### 10. Iniciar e finalizar cada serviço (registra duração)
+
+Para cada `line_item` cujo `item_type` é `service`, busque o `id` em
+`GET /api/v1/work_orders/<WORK_ORDER_ID>` e rode:
+
+```bash
+# Inicia o serviço
+curl -X PATCH http://localhost:3000/api/v1/work_orders/<WORK_ORDER_ID>/line_items/<LINE_ITEM_ID>/start \
+  -H "Authorization: Bearer <TOKEN>"
+
+# Finaliza o serviço
+curl -X PATCH http://localhost:3000/api/v1/work_orders/<WORK_ORDER_ID>/line_items/<LINE_ITEM_ID>/finish \
+  -H "Authorization: Bearer <TOKEN>"
+```
+
+Quando o último serviço é finalizado, a OS transiciona automaticamente para
+`completed`.
+
+#### 11. Consulta pública pelo `protocol` (sem autenticação)
+
+O cliente pode acompanhar a OS sem login usando o `protocol` impresso na
+criação:
+
+```bash
+curl http://localhost:3000/api/v1/tracking/<PROTOCOL>
+```
+
+#### 12. Métricas administrativas
+
+```bash
+curl http://localhost:3000/api/v1/admin/metrics \
+  -H "Authorization: Bearer <TOKEN>"
+```
 
 ## Verificando que está tudo funcionando
 
