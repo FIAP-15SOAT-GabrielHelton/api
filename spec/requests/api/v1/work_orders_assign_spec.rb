@@ -48,7 +48,7 @@ RSpec.describe "Api::V1::WorkOrders assign", type: :request do
           params: { mechanic_id: default_test_user.id },
           headers: auth_headers, as: :json
 
-    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response).to have_http_status(:unprocessable_content)
     expect(response.parsed_body["error"]).to eq("User is not a mechanic")
   end
 
@@ -59,7 +59,7 @@ RSpec.describe "Api::V1::WorkOrders assign", type: :request do
           params: { mechanic_id: 999_999 },
           headers: auth_headers, as: :json
 
-    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response).to have_http_status(:unprocessable_content)
     expect(response.parsed_body["error"]).to eq("Mechanic not found")
   end
 
@@ -71,7 +71,7 @@ RSpec.describe "Api::V1::WorkOrders assign", type: :request do
           params: { mechanic_id: default_test_mechanic.id },
           headers: auth_headers, as: :json
 
-    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response).to have_http_status(:unprocessable_content)
     expect(response.parsed_body["error"]).to eq("Mechanic is inactive")
   end
 end

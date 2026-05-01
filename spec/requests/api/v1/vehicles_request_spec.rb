@@ -59,7 +59,7 @@ RSpec.describe "Api::V1::Vehicles", type: :request do
     it "returns 422 with invalid license plate" do
       post "/api/v1/vehicles", params: valid_params.merge(license_plate: "INVALID"), headers: auth_headers, as: :json
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
       expect(response.parsed_body["error"]).to match(/Invalid license plate format/)
     end
 
@@ -67,14 +67,14 @@ RSpec.describe "Api::V1::Vehicles", type: :request do
       post "/api/v1/vehicles", params: valid_params, headers: auth_headers, as: :json
       post "/api/v1/vehicles", params: valid_params.merge(color: "Red"), headers: auth_headers, as: :json
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
       expect(response.parsed_body["error"]).to eq("License plate already registered")
     end
 
     it "returns 422 when customer does not exist" do
       post "/api/v1/vehicles", params: valid_params.merge(customer_id: 999_999), headers: auth_headers, as: :json
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
       expect(response.parsed_body["error"]).to eq("Customer not found")
     end
   end
@@ -130,7 +130,7 @@ RSpec.describe "Api::V1::Vehicles", type: :request do
     it "returns 422 when vehicle not found" do
       patch "/api/v1/vehicles/999999", params: { color: "Black" }, headers: auth_headers, as: :json
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
     end
   end
 end

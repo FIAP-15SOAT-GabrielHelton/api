@@ -37,7 +37,7 @@ RSpec.describe "Api::V1::Customers", type: :request do
     it "returns 422 with invalid document" do
       post "/api/v1/customers", params: valid_params.merge(document: "00000000000"), headers: auth_headers, as: :json
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
 
       body = response.parsed_body
       expect(body["error"]).to match(/Invalid CPF/)
@@ -47,7 +47,7 @@ RSpec.describe "Api::V1::Customers", type: :request do
       post "/api/v1/customers", params: valid_params, headers: auth_headers, as: :json
       post "/api/v1/customers", params: valid_params.merge(name: "Outro"), headers: auth_headers, as: :json
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
 
       body = response.parsed_body
       expect(body["error"]).to eq("Document already registered")
@@ -137,7 +137,7 @@ RSpec.describe "Api::V1::Customers", type: :request do
     it "returns 422 when customer not found" do
       patch "/api/v1/customers/999999", params: { name: "Test" }, headers: auth_headers, as: :json
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
     end
   end
 
@@ -159,14 +159,14 @@ RSpec.describe "Api::V1::Customers", type: :request do
       delete "/api/v1/customers/#{customer_id}", headers: auth_headers, as: :json
       delete "/api/v1/customers/#{customer_id}", headers: auth_headers, as: :json
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
       expect(response.parsed_body["error"]).to match(/already inactive/)
     end
 
     it "returns 422 when customer not found" do
       delete "/api/v1/customers/999999", headers: auth_headers, as: :json
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
     end
   end
 end

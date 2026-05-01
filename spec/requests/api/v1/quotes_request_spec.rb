@@ -78,13 +78,13 @@ RSpec.describe "Api::V1::Quotes", type: :request do
 
       patch "/api/v1/quotes/#{quote_id}/send_to_customer", headers: auth_headers, as: :json
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
     end
 
     it "returns 422 when quote not found" do
       patch "/api/v1/quotes/999999/send_to_customer", headers: auth_headers, as: :json
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
     end
   end
 
@@ -137,7 +137,7 @@ RSpec.describe "Api::V1::Quotes", type: :request do
 
       patch "/api/v1/quotes/#{ids[:quote_id]}/approve", headers: auth_headers, as: :json
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
       expect(response.parsed_body["error"]).to match(/Insufficient stock/)
 
       get "/api/v1/quotes/#{ids[:quote_id]}", headers: auth_headers, as: :json
@@ -153,7 +153,7 @@ RSpec.describe "Api::V1::Quotes", type: :request do
 
       patch "/api/v1/quotes/#{ids[:quote_id]}/approve", headers: auth_headers, as: :json
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
     end
   end
 
