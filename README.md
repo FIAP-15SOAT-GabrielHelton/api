@@ -37,32 +37,34 @@ docker compose build
 # 4. Criar e migrar os bancos (primary + queue)
 docker compose run --rm web bin/rails db:prepare
 
-# 5. Subir a aplicação
+# 5. Popular o banco com dados de demonstração
+#    (catálogo de serviços/peças + WOs em vários estados — ver "Demo Walkthrough")
+docker compose run --rm web bin/rails db:seed
+
+# 6. Subir a aplicação
 docker compose up
 ```
 
-Após o último passo, a API estará disponível em `http://localhost:3000`.
+Após o último passo, a API estará disponível em `http://localhost:3000` com
+todos os dados de demonstração já carregados.
 
 ## Demo Walkthrough
 
-Para popular o banco com dados realistas (clientes, veículos, catálogo de
-serviços e peças, e algumas Ordens de Serviço já distribuídas em vários
-estados):
+O passo 5 do setup acima (`db:seed`) popula o banco com dados realistas:
+clientes, veículos, catálogo de serviços e peças, e algumas Ordens de Serviço
+já distribuídas em vários estados. Ao final, o terminal imprime um resumo com
+credenciais, IDs de customers/vehicles e protocols das WorkOrders criadas.
 
-```bash
-docker compose run --rm web bin/rails db:seed
-```
-
-Ao final, o terminal imprime um resumo com credenciais, IDs de customers/vehicles e
-protocols das WorkOrders criadas. As credenciais padrão são:
+As credenciais padrão são:
 
 | Email | Senha | Role |
 |---|---|---|
 | `admin@oficina.local` | `oficina123` | admin |
 | `mechanic@oficina.local` | `oficina123` | mechanic |
 
-A seed é **idempotente**: rodar múltiplas vezes não duplica dados nem
-descrementa estoque novamente. Para resetar tudo do zero:
+A seed é **idempotente**: rodar múltiplas vezes (`docker compose run --rm web
+bin/rails db:seed`) não duplica dados nem decrementa estoque novamente. Para
+resetar tudo do zero:
 
 ```bash
 docker compose run --rm web bin/rails db:drop db:create db:migrate db:seed
