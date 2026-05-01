@@ -43,6 +43,42 @@ docker compose up
 
 Após o último passo, a API estará disponível em `http://localhost:3000`.
 
+## Demo Walkthrough
+
+Para popular o banco com dados realistas (clientes, veículos, catálogo de
+serviços e peças, e algumas Ordens de Serviço já distribuídas em vários
+estados):
+
+```bash
+docker compose run --rm web bin/rails db:seed
+```
+
+Ao final, o terminal imprime um resumo com credenciais, IDs de customers/vehicles e
+protocols das WorkOrders criadas. As credenciais padrão são:
+
+| Email | Senha | Role |
+|---|---|---|
+| `admin@oficina.local` | `oficina123` | admin |
+| `mechanic@oficina.local` | `oficina123` | mechanic |
+
+A seed é **idempotente**: rodar múltiplas vezes não duplica dados nem
+descrementa estoque novamente. Para resetar tudo do zero:
+
+```bash
+docker compose run --rm web bin/rails db:drop db:create db:migrate db:seed
+```
+
+### Fluxo completo via HTTP
+
+O arquivo [`docs/demo.http`](docs/demo.http) contém uma coleção pronta de
+requests cobrindo o fluxo end-to-end (login → criar OS → diagnosticar → aprovar
+orçamento → executar → completar). Abra-o no VSCode com a extensão
+[REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client)
+ou no IntelliJ HTTP Client e clique em "Send Request" em cada bloco.
+
+Como alternativa visual, a UI do Swagger fica em
+[`http://localhost:3000/api-docs`](http://localhost:3000/api-docs).
+
 ## Verificando que está tudo funcionando
 
 ```bash
