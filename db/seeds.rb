@@ -300,6 +300,12 @@ else
   refreshed3 = work_order_repo.find(wo3.id)
   oil_item = refreshed3.line_items.find { |li| li.service? && li.name_snapshot == services[:oil].name }
   seed_call!(start_line, work_order_id: wo3.id, line_item_id: oil_item.id)
+
+  # Update the started line item to have a realistic start time (30 minutes ago)
+  Persistence::WorkOrders::LineItemRecord.find(oil_item.id).update(
+    started_at: 30.minutes.ago
+  )
+
   wo3 = work_order_repo.find(wo3.id)
   work_orders_summary << { wo: wo3, customer: customers[:acme], vehicle: vehicles[:sprinter] }
   puts "Seed: created WO #{wo3.protocol} (in_progress)."
@@ -320,9 +326,19 @@ else
   seed_call!(approve_quote, id: quote4.id)
   seed_call!(execute_wo, id: wo4.id)
   refreshed4 = work_order_repo.find(wo4.id)
-  refreshed4.service_line_items.each do |item|
+  # Start and finish each service with realistic time durations
+  refreshed4.service_line_items.each_with_index do |item, idx|
     seed_call!(start_line, work_order_id: wo4.id, line_item_id: item.id)
     seed_call!(finish_line, work_order_id: wo4.id, line_item_id: item.id)
+
+    # Update timestamps to add realistic durations (20-40 minutes per service)
+    duration_minutes = (20 + idx * 10).minutes
+    started_at = 2.hours.ago
+    finished_at = started_at + duration_minutes
+    Persistence::WorkOrders::LineItemRecord.find(item.id).update(
+      started_at: started_at,
+      finished_at: finished_at
+    )
   end
   wo4 = work_order_repo.find(wo4.id)
   work_orders_summary << { wo: wo4, customer: customers[:joao], vehicle: vehicles[:civic] }

@@ -34,3 +34,6 @@
 
 .idea/
 /coverage/
+
+# Ignore Bruno API collection files (local testing)
+/bruno/
