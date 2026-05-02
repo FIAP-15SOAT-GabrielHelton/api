@@ -16,6 +16,30 @@ module ReadModels
       service_scope.count
     end
 
+    def average_duration_minutes_by_service
+      Persistence::WorkOrders::LineItemRecord
+        .joins("INNER JOIN services ON services.id = line_items.reference_id")
+        .where(item_type: "service")
+        .where.not(started_at: nil)
+        .where.not(finished_at: nil)
+        .group("services.id", "services.name")
+        .order("services.name ASC")
+        .pluck(
+          "services.id",
+          "services.name",
+          Arel.sql("AVG(EXTRACT(EPOCH FROM (finished_at - started_at)) / 60.0)"),
+          Arel.sql("COUNT(*)")
+        )
+        .map do |service_id, service_name, avg_minutes, count|
+          {
+            service_id: service_id,
+            service_name: service_name,
+            average_duration_minutes: avg_minutes.to_f.round(2),
+            completed_services_count: count
+          }
+        end
+    end
+
     private
 
     def service_scope

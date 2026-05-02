@@ -13,7 +13,20 @@ RSpec.describe 'Api::V1::Admin::Metrics', openapi_spec: 'v1/swagger.json', type:
         schema type: :object,
                properties: {
                  average_service_duration_minutes: { type: :number, nullable: true },
-                 completed_services_count: { type: :integer }
+                 completed_services_count: { type: :integer },
+                 by_service: {
+                   type: :array,
+                   items: {
+                     type: :object,
+                     properties: {
+                       service_id: { type: :integer },
+                       service_name: { type: :string },
+                       average_duration_minutes: { type: :number },
+                       completed_services_count: { type: :integer }
+                     },
+                     required: %w[service_id service_name average_duration_minutes completed_services_count]
+                   }
+                 }
                }
         run_test!
       end

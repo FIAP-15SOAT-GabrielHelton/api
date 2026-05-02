@@ -30,6 +30,32 @@
                     },
                     "completed_services_count": {
                       "type": "integer"
+                    },
+                    "by_service": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "service_id": {
+                            "type": "integer"
+                          },
+                          "service_name": {
+                            "type": "string"
+                          },
+                          "average_duration_minutes": {
+                            "type": "number"
+                          },
+                          "completed_services_count": {
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "service_id",
+                          "service_name",
+                          "average_duration_minutes",
+                          "completed_services_count"
+                        ]
+                      }
                     }
                   }
                 }
