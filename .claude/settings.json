@@ -6,8 +6,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "FILE=$(jq -r '.tool_input.file_path // .tool_response.filePath'); PROJ=\"$CLAUDE_PROJECT_DIR\"; REL=\"${FILE#$PROJ/}\"; if echo \"$REL\" | grep -qE '^spec/(requests/.*_spec\\.rb|swagger_helper\\.rb)$'; then cd \"$PROJ\" && bundle exec rake rswag:specs:swaggerize; fi",
-            "timeout": 60,
+            "command": "FILE=$(jq -r '.tool_input.file_path // .tool_response.filePath'); PROJ=\"$CLAUDE_PROJECT_DIR\"; REL=\"${FILE#$PROJ/}\"; if echo \"$REL\" | grep -qE '^spec/(requests/.*_spec\\.rb|swagger_helper\\.rb)$'; then cd \"$PROJ\" && docker compose run --rm --no-deps web bundle exec rake swagger:generate; fi",
+            "timeout": 120,
             "statusMessage": "Regenerating swagger/v1/swagger.json..."
           }
         ]

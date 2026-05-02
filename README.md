@@ -450,14 +450,16 @@ O arquivo gerado fica em `swagger/v1/swagger.json` e é versionado no repositór
 Sempre que um request spec for alterado, regenere o arquivo:
 
 ```bash
-docker compose exec web bundle exec rake rswag:specs:swaggerize
+docker compose run --rm web bundle exec rake swagger:generate
 ```
+
+> **Importante:** use sempre `swagger:generate` (não `rswag:specs:swaggerize` diretamente). A task garante que `SWAGGER_DRY_RUN=1` esteja definido; sem ela, o rswag roda os specs contra um banco desconectado, não grava nenhum path e entrega um `swagger.json` vazio silenciosamente.
 
 ### Manter em sincronia automaticamente
 
 Dois mecanismos garantem que `swagger/v1/swagger.json` nunca fique desatualizado:
 
-- **Pre-commit hook** (`.githooks/pre-commit`): antes de cada commit, verifica se algum arquivo em `spec/requests/` ou `spec/swagger_helper.rb` foi alterado. Se sim, regenera o JSON e inclui a atualização no mesmo commit.
+- **Pre-commit hook** (`.githooks/pre-commit`): antes de cada commit, verifica se algum arquivo em `spec/requests/` ou `spec/swagger_helper.rb` foi alterado. Se sim, executa `swagger:generate` via Docker e inclui o JSON atualizado no mesmo commit.
 - **Claude Code hook** (`.claude/settings.json`): dentro de uma sessão do Claude Code, regenera o JSON automaticamente sempre que Claude edita um request spec.
 
 O hook de git requer uma configuração local feita pelo `bin/setup`:
@@ -468,7 +470,7 @@ git config core.hooksPath .githooks
 
 ### Adicionando documentação para novos endpoints
 
-Os specs que geram o Swagger ficam em `spec/requests/api/v1/`. Siga o padrão do arquivo `customers_spec.rb` como referência: use o DSL `path`/`get`/`post`/`response` do rswag em um `RSpec.describe` com a tag `swagger_doc: 'v1/swagger.json'` e `require 'swagger_helper'`.
+Os specs que geram o Swagger ficam em `spec/requests/api/v1/`. Siga o padrão do arquivo `customers_spec.rb` como referência: use o DSL `path`/`get`/`post`/`response` do rswag em um `RSpec.describe` com a tag `openapi_spec: 'v1/swagger.json'` e `require 'swagger_helper'`.
 
 ## Testes
 

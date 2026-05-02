@@ -6,7 +6,7 @@ STAGED=$(git diff --cached --name-only)
 # Regenerate swagger/v1/swagger.json if any request spec or swagger_helper changed
 if echo "$STAGED" | grep -qE '^spec/(requests/.*_spec\.rb|swagger_helper\.rb)$'; then
   echo "→ Swagger spec changed — regenerating swagger/v1/swagger.json"
-  bundle exec rake rswag:specs:swaggerize
+  docker compose run --rm --no-deps web bundle exec rake swagger:generate
   git add swagger/v1/swagger.json
 fi
 
