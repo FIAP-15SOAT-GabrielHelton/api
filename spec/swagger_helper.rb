@@ -1,9 +1,13 @@
 require 'rails_helper'
 
-# Prevent database access during swagger generation
 ActiveRecord::Base.connection.disconnect! if ActiveRecord::Base.connected?
 
 RSpec.configure do |config|
+  # During swagger generation the rake task sets SWAGGER_GENERATION=1, which lifts
+  # the openapi_spec exclusion set in rails_helper so rswag can discover all specs.
+  # Without this guard the filter would be removed on every normal rspec run too,
+  # causing rswag specs to leak into the test suite and fail.
+  config.exclusion_filter.delete(:openapi_spec) if ENV["SWAGGER_GENERATION"] == "1"
   # Specify a root folder where Swagger JSON files are generated
   # NOTE: If you're using the rswag-api to serve API descriptions, you'll need
   # to ensure that it's configured to serve Swagger from the same folder
