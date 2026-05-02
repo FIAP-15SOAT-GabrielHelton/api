@@ -17,16 +17,16 @@ module ReadModels
     end
 
     def average_duration_minutes_by_service
-      Persistence::WorkOrders::LineItemRecord
-        .joins("INNER JOIN services ON services.id = line_items.reference_id")
-        .where(item_type: "service")
-        .where.not(started_at: nil)
-        .where.not(finished_at: nil)
-        .group("services.id", "services.name")
-        .order("services.name ASC")
+      services = ::Persistence::Registrations::ServiceRecord.table_name
+      line_items = Persistence::WorkOrders::LineItemRecord.table_name
+
+      service_scope
+        .joins("INNER JOIN #{services} ON #{services}.id = #{line_items}.reference_id")
+        .group("#{services}.id", "#{services}.name")
+        .order("#{services}.name ASC")
         .pluck(
-          "services.id",
-          "services.name",
+          Arel.sql("#{services}.id"),
+          Arel.sql("#{services}.name"),
           Arel.sql("AVG(EXTRACT(EPOCH FROM (finished_at - started_at)) / 60.0)"),
           Arel.sql("COUNT(*)")
         )
