@@ -1,25 +1,13 @@
 require 'rails_helper'
 
-# swagger_helper is only intended for dry-run swagger generation.
-# Running rswag:specs:swaggerize without SWAGGER_DRY_RUN=1 causes specs to fail
-# silently (due to the disconnect below) and produces an empty paths: {} in swagger.json.
-if ENV['SWAGGER_DRY_RUN'] != '1'
-  abort <<~MSG
-
-    ERROR: swagger_helper requires SWAGGER_DRY_RUN=1.
-
-    Run swagger generation with:
-      docker compose run --rm web bundle exec rake rswag:specs:swaggerize SWAGGER_DRY_RUN=1
-
-  MSG
-end
-
 ActiveRecord::Base.connection.disconnect! if ActiveRecord::Base.connected?
 
 RSpec.configure do |config|
-  # rails_helper excludes openapi_spec-tagged examples from the regular test suite.
-  # Remove that exclusion here so rswag can discover and process all swagger specs.
-  config.exclusion_filter.delete(:openapi_spec)
+  # During swagger generation the rake task sets SWAGGER_GENERATION=1, which lifts
+  # the openapi_spec exclusion set in rails_helper so rswag can discover all specs.
+  # Without this guard the filter would be removed on every normal rspec run too,
+  # causing rswag specs to leak into the test suite and fail.
+  config.exclusion_filter.delete(:openapi_spec) if ENV["SWAGGER_GENERATION"] == "1"
   # Specify a root folder where Swagger JSON files are generated
   # NOTE: If you're using the rswag-api to serve API descriptions, you'll need
   # to ensure that it's configured to serve Swagger from the same folder
