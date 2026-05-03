@@ -118,13 +118,20 @@ curl -X PATCH http://localhost:3000/api/v1/work_orders/<WORK_ORDER_ID>/line_item
 
 Quando o último serviço é finalizado, a OS transiciona automaticamente para `completed`.
 
-## 11. Consulta pública pelo `protocol` (sem autenticação)
+## 11. Entregar o veículo ao cliente — `completed` → `delivered`
+
+```bash
+curl -X PATCH http://localhost:3000/api/v1/work_orders/<WORK_ORDER_ID>/deliver \
+  -H "Authorization: Bearer <TOKEN>"
+```
+
+## 12. Consulta pública pelo `protocol` (sem autenticação)
 
 ```bash
 curl http://localhost:3000/api/v1/tracking/<PROTOCOL>
 ```
 
-## 12. Métricas administrativas
+## 13. Métricas administrativas
 
 ```bash
 curl http://localhost:3000/api/v1/admin/metrics \

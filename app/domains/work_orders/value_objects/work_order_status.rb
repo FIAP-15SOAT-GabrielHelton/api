@@ -10,6 +10,7 @@ module WorkOrders
         approved
         in_progress
         completed
+        delivered
         rejected
       ].freeze
 
@@ -19,7 +20,8 @@ module WorkOrders
         awaiting_approval: %i[approved rejected],
         approved: %i[in_progress],
         in_progress: %i[completed],
-        completed: [],
+        completed: %i[delivered],
+        delivered: [],
         rejected: []
       }.freeze
 

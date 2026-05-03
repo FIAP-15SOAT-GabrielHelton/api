@@ -84,12 +84,16 @@ describe WorkOrders::ValueObjects::WorkOrderStatus do
   end
 
   describe "#terminal?" do
-    it "returns true for completed" do
-      expect(described_class.new(:completed).terminal?).to be true
+    it "returns true for delivered" do
+      expect(described_class.new(:delivered).terminal?).to be true
     end
 
     it "returns true for rejected" do
       expect(described_class.new(:rejected).terminal?).to be true
+    end
+
+    it "returns false for completed (can still transition to delivered)" do
+      expect(described_class.new(:completed).terminal?).to be false
     end
 
     it "returns false for intermediate states" do

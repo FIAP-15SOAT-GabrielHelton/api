@@ -53,6 +53,16 @@ module Api
         end
       end
 
+      def destroy
+        result = deactivate_vehicle.call(id: params[:id])
+
+        if result.success?
+          render json: serialize(result.value)
+        else
+          render json: { error: result.error }, status: :not_found
+        end
+      end
+
       private
 
       def vehicle_repository
@@ -76,6 +86,10 @@ module Api
 
       def update_vehicle
         Registrations::UpdateVehicle.new(vehicle_repository: vehicle_repository)
+      end
+
+      def deactivate_vehicle
+        Registrations::DeactivateVehicle.new(vehicle_repository: vehicle_repository)
       end
 
       def find_vehicle(id)
