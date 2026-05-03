@@ -75,6 +75,27 @@ RSpec.describe 'Api::V1::Vehicles', openapi_spec: 'v1/swagger.json', type: :requ
       end
     end
 
+    delete 'Deactivate vehicle (soft delete)' do
+      tags 'Vehicles'
+      produces 'application/json'
+      security [ { bearerAuth: [] } ]
+      parameter name: :id, in: :path, type: :integer, required: true
+
+      response '200', 'vehicle deactivated' do
+        schema '$ref' => '#/components/schemas/Vehicle'
+        run_test!
+      end
+
+      response '404', 'not found' do
+        schema '$ref' => '#/components/schemas/Error'
+        run_test!
+      end
+
+      response '401', 'unauthorized' do
+        run_test!
+      end
+    end
+
     patch 'Update vehicle' do
       tags 'Vehicles'
       consumes 'application/json'

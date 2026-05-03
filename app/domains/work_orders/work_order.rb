@@ -13,12 +13,12 @@ module WorkOrders
 
     attr_reader :customer_id, :vehicle_id, :problem_description, :status, :mechanic_id,
                 :line_items, :protocol, :created_at, :updated_at, :executed_at, :completed_at,
-                :total_execution_time_minutes
+                :delivered_at, :total_execution_time_minutes
 
     def initialize(id:, customer_id:, vehicle_id:, problem_description:,
                    status: :received, mechanic_id: nil, line_items: [],
                    protocol: nil, created_at: nil, updated_at: nil,
-                   executed_at: nil, completed_at: nil,
+                   executed_at: nil, completed_at: nil, delivered_at: nil,
                    total_execution_time_minutes: nil)
       super(id: id)
       raise ArgumentError, "customer_id is required" if customer_id.nil?
@@ -35,6 +35,7 @@ module WorkOrders
       @updated_at = updated_at
       @executed_at = executed_at
       @completed_at = completed_at
+      @delivered_at = delivered_at
       @total_execution_time_minutes = total_execution_time_minutes
     end
 
@@ -93,6 +94,11 @@ module WorkOrders
       return nil if durations.empty?
 
       (durations.sum / durations.size).round(2)
+    end
+
+    def deliver
+      @status = @status.transition_to(:delivered)
+      @delivered_at = Time.now
     end
 
     def reject

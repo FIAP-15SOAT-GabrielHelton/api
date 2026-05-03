@@ -1581,6 +1581,52 @@
           }
         }
       },
+      "delete": {
+        "summary": "Deactivate vehicle (soft delete)",
+        "tags": [
+          "Vehicles"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "vehicle deactivated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Vehicle"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          }
+        }
+      },
       "patch": {
         "summary": "Update vehicle",
         "tags": [
@@ -1658,7 +1704,7 @@
             "name": "status",
             "in": "query",
             "required": false,
-            "description": "Filter by status (received, diagnosing, awaiting_approval, approved, in_progress, completed, rejected)",
+            "description": "Filter by status (received, diagnosing, awaiting_approval, approved, in_progress, completed, delivered, rejected)",
             "schema": {
               "type": "string"
             }
@@ -2162,6 +2208,54 @@
         }
       }
     },
+    "/api/v1/work_orders/{id}/deliver": {
+      "patch": {
+        "summary": "Deliver work order to customer (status → delivered)",
+        "tags": [
+          "Work Orders"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "work order delivered",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrder"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "unprocessable entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          }
+        }
+      }
+    },
     "/api/v1/work_orders/{id}/line_items/{line_item_id}/start": {
       "patch": {
         "summary": "Start a service line item",
@@ -2471,6 +2565,7 @@
               "approved",
               "in_progress",
               "completed",
+              "delivered",
               "rejected"
             ]
           },
@@ -2491,6 +2586,11 @@
             "nullable": true
           },
           "completed_at": {
+            "type": "string",
+            "format": "date_time",
+            "nullable": true
+          },
+          "delivered_at": {
             "type": "string",
             "format": "date_time",
             "nullable": true

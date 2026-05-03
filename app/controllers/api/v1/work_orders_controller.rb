@@ -98,6 +98,16 @@ module Api
         end
       end
 
+      def deliver
+        result = deliver_work_order.call(id: params[:id])
+
+        if result.success?
+          render json: serialize(result.value)
+        else
+          render json: { error: result.error }, status: :unprocessable_entity
+        end
+      end
+
       def start_line_item
         result = start_line_item_service.call(work_order_id: params[:id], line_item_id: params[:line_item_id])
 
@@ -195,6 +205,10 @@ module Api
         WorkOrders::CompleteWorkOrder.new(work_order_repository: work_order_repository)
       end
 
+      def deliver_work_order
+        WorkOrders::DeliverWorkOrder.new(work_order_repository: work_order_repository)
+      end
+
       def start_line_item_service
         WorkOrders::StartLineItemService.new(work_order_repository: work_order_repository)
       end
@@ -224,6 +238,7 @@ module Api
           protocol: work_order.protocol,
           executed_at: work_order.executed_at,
           completed_at: work_order.completed_at,
+          delivered_at: work_order.delivered_at,
           total_execution_time_minutes: work_order.total_execution_time_minutes,
           average_service_duration_minutes: work_order.average_service_duration_minutes,
           created_at: work_order.created_at,
