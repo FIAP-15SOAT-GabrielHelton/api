@@ -117,29 +117,23 @@ Análise consolidada de segurança, qualidade de código e cobertura em um dashb
 **Executar análise localmente:**
 
 ```bash
-# 1. Gerar relatório de cobertura com SimpleCov JSON
-docker compose run --rm web sh -c "COVERAGE=1 bundle exec rspec"
-
-# 2. Iniciar SonarQube (primeira execução: 60-120s)
-docker compose -f compose.sonar.yml up sonarqube -d
-
-# 3. Esperar pelo servidor ficar pronto
-sleep 30
-
-# 4. Gerar token de autenticação
-TOKEN=$(curl -s -u admin:admin -X POST "http://localhost:9000/api/user_tokens/generate?name=scanner" | grep -o '"token":"[^"]*"' | cut -d'"' -f4)
-
-# 5. Executar análise
-docker run --rm --network oficina-mecanica-sonar_sonar \
-  -e SONAR_HOST_URL=http://sonarqube:9000 \
-  -e SONAR_TOKEN=$TOKEN \
-  -v "$PWD":/usr/src \
-  sonarsource/sonar-scanner-cli:latest
+./bin/run_sonarqube.sh
 ```
 
-**Acessar o dashboard:**
+A primeira execução demora 30-60s (SonarQube iniciando). Rodadas subsequentes são mais rápidas.
+
+**Comandos disponíveis:**
+
+```bash
+./bin/run_sonarqube.sh analyze     # Rodar análise completa (padrão)
+./bin/run_sonarqube.sh dashboard   # Abrir dashboard no navegador
+./bin/run_sonarqube.sh stop        # Parar servidor e limpar volumes
+```
+
+**Dashboard:**
+- Abres automaticamente após a análise ou via `./bin/run_sonarqube.sh dashboard`
 - URL: http://localhost:9000/dashboard?id=oficina_mecanica
-- Login padrão (primeira vez): admin / admin (força mudança de senha)
+- Login padrão (primeira vez): admin / admin
 
 **Tabs principais:**
 - **Overview** — métricas gerais (bugs, vulnerabilidades, code smells, cobertura)
@@ -147,30 +141,10 @@ docker run --rm --network oficina-mecanica-sonar_sonar \
 - **Code** — code smells, duplicação, tamanho de métodos
 - **Coverage** — linha por linha com cores (verde = coberto, vermelho = não coberto)
 
-**Parar SonarQube:**
-
-```bash
-docker compose -f compose.sonar.yml down
-```
-
-**Rodadas subsequentes:**
-
-Se SonarQube já está rodando:
-```bash
-TOKEN=$(curl -s -u admin:admin -X POST "http://localhost:9000/api/user_tokens/generate?name=scanner" | grep -o '"token":"[^"]*"' | cut -d'"' -f4)
-docker run --rm --network oficina-mecanica-sonar_sonar \
-  -e SONAR_HOST_URL=http://sonarqube:9000 \
-  -e SONAR_TOKEN=$TOKEN \
-  -v "$PWD":/usr/src \
-  sonarsource/sonar-scanner-cli:latest
-```
-
 **Arquivos de configuração:**
 - `sonar-project.properties` — define qual código analisar, exclusões, caminho da cobertura
 - `compose.sonar.yml` — stack Docker isolado (não polui a stack da aplicação)
-
-**Integração com SimpleCov:**
-SonarQube lê `coverage/coverage.json` gerado pelo `simplecov_json_formatter` e mostra cobertura por linha. Código não coberto é destacado em vermelho no dashboard, facilitando identificar gaps de teste.
+- `bin/run_sonarqube.sh` — script que orquestra todo o fluxo
 
 ---
 
