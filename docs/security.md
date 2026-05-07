@@ -1,14 +1,15 @@
 # Segurança — Scanning de Vulnerabilidades
 
-O projeto integra quatro ferramentas cobrindo diferentes camadas: dependências Ruby, código Rails, pacotes do SO e padrões de código inseguros.
+O projeto integra cinco ferramentas cobrindo diferentes camadas: dependências Ruby, código Rails, pacotes do SO, padrões de código inseguros e comportamento em tempo de execução.
 
-| Ferramenta        | O que detecta                                                 | Quando roda |
-| ----------------- | ------------------------------------------------------------- | ----------- |
-| **bundler-audit** | CVEs conhecidas em gems (`Gemfile.lock`)                      | Local + CI  |
-| **brakeman**      | Vulnerabilidades Rails (SQL injection, XSS, mass assignment…) | Local + CI  |
-| **Trivy**         | CVEs em pacotes OS, Dockerfile misconfigs, gems               | Local + CI  |
-| **Semgrep**       | Padrões de código inseguro (Ruby/Rails rules)                 | Local + CI  |
-| **SonarQube**     | Vulnerabilidades consolidadas, code smells, cobertura         | Local      |
+| Ferramenta        | Tipo  | O que detecta                                                 | Quando roda |
+| ----------------- | ----- | ------------------------------------------------------------- | ----------- |
+| **bundler-audit** | SAST  | CVEs conhecidas em gems (`Gemfile.lock`)                      | Local + CI  |
+| **brakeman**      | SAST  | Vulnerabilidades Rails (SQL injection, XSS, mass assignment…) | Local + CI  |
+| **Trivy**         | SAST  | CVEs em pacotes OS, Dockerfile misconfigs, gems               | Local + CI  |
+| **Semgrep**       | SAST  | Padrões de código inseguro (Ruby/Rails rules)                 | Local + CI  |
+| **SonarQube**     | SAST  | Vulnerabilidades consolidadas, code smells, cobertura         | Local       |
+| **OWASP ZAP**     | DAST  | Vulnerabilidades em tempo de execução via requisições reais   | Local       |
 
 ## Executando localmente
 
@@ -145,6 +146,40 @@ A primeira execução demora 30-60s (SonarQube iniciando). Rodadas subsequentes 
 - `sonar-project.properties` — define qual código analisar, exclusões, caminho da cobertura
 - `compose.sonar.yml` — stack Docker isolado (não polui a stack da aplicação)
 - `bin/run_sonarqube.sh` — script que orquestra todo o fluxo
+
+---
+
+### OWASP ZAP
+
+Scanner dinâmico (DAST — *Dynamic Application Security Testing*). Ao contrário das ferramentas acima, que leem o código sem executá-lo, o ZAP sobe como um proxy e faz requisições reais à API em execução, observando as respostas em busca de vulnerabilidades que só se manifestam em tempo de execução: headers de segurança ausentes, exposição de informações no corpo das respostas, falhas de autenticação e injeção.
+
+O script autentica automaticamente com as credenciais do seed, obtém um token JWT e o injeta em todas as requisições, garantindo cobertura dos endpoints protegidos.
+
+**Executar localmente (requer `docker compose up -d`):**
+
+```bash
+./bin/run_zap.sh          # executa o scan e gera o relatório
+./bin/run_zap.sh report   # abre tmp/zap_report.html no navegador
+```
+
+**Exemplos de alertas detectados:**
+
+```
+Alert: X-Content-Type-Options Header Missing
+Risk: Low | URL: http://localhost:3000/api/v1/orders
+Solution: Ensure the application sets the header 'X-Content-Type-Options' to 'nosniff'
+
+Alert: Application Error Disclosure
+Risk: Medium | URL: http://localhost:3000/api/v1/budgets
+Solution: Review error handling to avoid leaking stack traces in production
+```
+
+**Remediar:** seguir a solução sugerida no alerta — geralmente um header de resposta ou ajuste no tratamento de erros.
+
+**Arquivos de configuração:**
+- `bin/run_zap.sh` — script que orquestra o fluxo completo
+- `tmp/zap_openapi.json` — spec OpenAPI gerada pelo script (não commitada)
+- `tmp/zap_report.html` — relatório HTML gerado pelo ZAP (não commitado)
 
 ---
 
