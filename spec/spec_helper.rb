@@ -14,6 +14,7 @@
 #
 if ENV.fetch("COVERAGE", nil)
   require "simplecov"
+  require "simplecov_json_formatter"
   SimpleCov.start do
     enable_coverage :branch
     minimum_coverage line: 80, branch: 80
@@ -26,6 +27,11 @@ if ENV.fetch("COVERAGE", nil)
     add_group "Application", "app/application"
     add_group "Infrastructure", "app/infrastructure"
     add_group "Controllers", "app/controllers"
+
+    formatter SimpleCov::Formatter::MultiFormatter.new([
+      SimpleCov::Formatter::HTMLFormatter,
+      SimpleCov::Formatter::JSONFormatter
+    ])
   end
 end
 

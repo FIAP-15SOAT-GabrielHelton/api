@@ -16,6 +16,7 @@
 /tmp/*
 !/log/.keep
 !/tmp/.keep
+.DS_Store
 
 # Ignore pidfiles, but keep the directory.
 /tmp/pids/*
@@ -34,6 +35,10 @@
 
 .idea/
 /coverage/
+
+# SonarQube scanner cache
+.sonar/
+.scannerwork/
 
 # Ignore Bruno API collection files (local testing)
 /bruno/

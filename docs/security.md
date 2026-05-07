@@ -8,6 +8,7 @@ O projeto integra quatro ferramentas cobrindo diferentes camadas: dependências 
 | **brakeman**      | Vulnerabilidades Rails (SQL injection, XSS, mass assignment…) | Local + CI  |
 | **Trivy**         | CVEs em pacotes OS, Dockerfile misconfigs, gems               | Local + CI  |
 | **Semgrep**       | Padrões de código inseguro (Ruby/Rails rules)                 | Local + CI  |
+| **SonarQube**     | Vulnerabilidades consolidadas, code smells, cobertura         | Local      |
 
 ## Executando localmente
 
@@ -99,6 +100,51 @@ Message: Use YAML.safe_load instead of YAML.load to prevent code execution
 
 **Remediar:** seguir a sugestão da mensagem — geralmente é uma substituição simples.  
 **Suprimir falso positivo:** prefixar com `# nosemgrep`.
+
+---
+
+### SonarQube
+
+Análise consolidada de segurança, qualidade de código e cobertura em um dashboard interativo. Integra-se com SimpleCov para mostrar quais linhas estão cobertas por testes.
+
+**O que detecta:**
+- Hotspots de segurança (código suspeito que precisa de review)
+- Vulnerabilidades (com severidade: Blocker, Critical, Major, Minor, Info)
+- Code smells (código confuso ou duplicado)
+- Cobertura de testes por linha/branch
+- Duplicação de código
+
+**Executar análise localmente:**
+
+```bash
+./bin/run_sonarqube.sh
+```
+
+A primeira execução demora 30-60s (SonarQube iniciando). Rodadas subsequentes são mais rápidas.
+
+**Comandos disponíveis:**
+
+```bash
+./bin/run_sonarqube.sh analyze     # Rodar análise completa (padrão)
+./bin/run_sonarqube.sh dashboard   # Abrir dashboard no navegador
+./bin/run_sonarqube.sh stop        # Parar servidor e limpar volumes
+```
+
+**Dashboard:**
+- Abres automaticamente após a análise ou via `./bin/run_sonarqube.sh dashboard`
+- URL: http://localhost:9000/dashboard?id=oficina_mecanica
+- Login padrão (primeira vez): admin / admin
+
+**Tabs principais:**
+- **Overview** — métricas gerais (bugs, vulnerabilidades, code smells, cobertura)
+- **Security** — vulnerabilidades por severidade, hotspots, análise de risco
+- **Code** — code smells, duplicação, tamanho de métodos
+- **Coverage** — linha por linha com cores (verde = coberto, vermelho = não coberto)
+
+**Arquivos de configuração:**
+- `sonar-project.properties` — define qual código analisar, exclusões, caminho da cobertura
+- `compose.sonar.yml` — stack Docker isolado (não polui a stack da aplicação)
+- `bin/run_sonarqube.sh` — script que orquestra todo o fluxo
 
 ---
 
