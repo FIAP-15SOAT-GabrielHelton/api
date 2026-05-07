@@ -35,5 +35,9 @@
 .idea/
 /coverage/
 
+# SonarQube scanner cache
+.sonar/
+.scannerwork/
+
 # Ignore Bruno API collection files (local testing)
 /bruno/
