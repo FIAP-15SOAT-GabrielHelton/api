@@ -7,7 +7,7 @@ module Api
         result = list_customer_vehicles.call(customer_id: params[:customer_id])
 
         if result.success?
-          render json: result.value.map { |v| serialize(v) }
+          render json: result.value.map { |v| Registrations::Presenters::Vehicle.call(v) }
         else
           render json: { error: result.error }, status: :unprocessable_entity
         end
@@ -17,7 +17,7 @@ module Api
         result = find_vehicle(params[:id])
 
         if result.success?
-          render json: serialize(result.value)
+          render json: Registrations::Presenters::Vehicle.call(result.value)
         else
           render json: { error: result.error }, status: :not_found
         end
@@ -34,7 +34,7 @@ module Api
         )
 
         if result.success?
-          render json: serialize(result.value), status: :created
+          render json: Registrations::Presenters::Vehicle.call(result.value), status: :created
         else
           render json: { error: result.error }, status: :unprocessable_entity
         end
@@ -47,7 +47,7 @@ module Api
         )
 
         if result.success?
-          render json: serialize(result.value)
+          render json: Registrations::Presenters::Vehicle.call(result.value)
         else
           render json: { error: result.error }, status: :unprocessable_entity
         end
@@ -57,7 +57,7 @@ module Api
         result = deactivate_vehicle.call(id: params[:id])
 
         if result.success?
-          render json: serialize(result.value)
+          render json: Registrations::Presenters::Vehicle.call(result.value)
         else
           render json: { error: result.error }, status: :not_found
         end
@@ -106,19 +106,6 @@ module Api
         permitted[:year] = params[:year] if params.key?(:year)
         permitted[:color] = params[:color] if params.key?(:color)
         permitted
-      end
-
-      def serialize(vehicle)
-        {
-          id: vehicle.id,
-          customer_id: vehicle.customer_id,
-          license_plate: vehicle.license_plate.formatted,
-          make: vehicle.make,
-          model: vehicle.model,
-          year: vehicle.year,
-          color: vehicle.color,
-          status: vehicle.status
-        }
       end
     end
   end

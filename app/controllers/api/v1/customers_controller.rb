@@ -6,14 +6,14 @@ module Api
       def index
         result = list_customers.call
 
-        render json: result.value.map { |c| serialize(c) }
+        render json: result.value.map { |c| Registrations::Presenters::Customer.call(c) }
       end
 
       def show
         result = find_customer.call(id: params[:id])
 
         if result.success?
-          render json: serialize(result.value)
+          render json: Registrations::Presenters::Customer.call(result.value)
         else
           render json: { error: result.error }, status: :not_found
         end
@@ -30,7 +30,7 @@ module Api
         )
 
         if result.success?
-          render json: serialize(result.value), status: :created
+          render json: Registrations::Presenters::Customer.call(result.value), status: :created
         else
           render json: { error: result.error }, status: :unprocessable_entity
         end
@@ -43,7 +43,7 @@ module Api
         )
 
         if result.success?
-          render json: serialize(result.value)
+          render json: Registrations::Presenters::Customer.call(result.value)
         else
           render json: { error: result.error }, status: :unprocessable_entity
         end
@@ -53,7 +53,7 @@ module Api
         result = deactivate_customer.call(id: params[:id])
 
         if result.success?
-          render json: serialize(result.value)
+          render json: Registrations::Presenters::Customer.call(result.value)
         else
           render json: { error: result.error }, status: :unprocessable_entity
         end
@@ -98,26 +98,6 @@ module Api
         permitted[:phone] = params[:phone] if params.key?(:phone)
         permitted[:address] = address_params if params.key?(:address)
         permitted
-      end
-
-      def serialize(customer)
-        {
-          id: customer.id,
-          person_type: customer.person_type,
-          document: customer.document.formatted,
-          name: customer.name,
-          email: customer.email,
-          phone: customer.phone,
-          address: {
-            zip_code: customer.address.zip_code,
-            street: customer.address.street,
-            number: customer.address.number,
-            complement: customer.address.complement,
-            city: customer.address.city,
-            state: customer.address.state
-          },
-          status: customer.status
-        }
       end
     end
   end
