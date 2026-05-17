@@ -58,6 +58,8 @@ Rails.application.routes.draw do
     end
   end
 
-  mount Rswag::Ui::Engine => "/api-docs"
-  mount Rswag::Api::Engine => "/api-docs"
+  if defined?(Rswag::Ui::Engine) && defined?(Rswag::Api::Engine)
+    mount Rswag::Ui::Engine => "/api-docs"
+    mount Rswag::Api::Engine => "/api-docs"
+  end
 end
