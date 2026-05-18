@@ -38,6 +38,10 @@ gem "image_processing", "~> 1.2"
 # Required for Ruby 4.0+ compatibility (used by rswag-ui)
 gem "ostruct"
 
+# API documentation engines — served in all environments so /api-docs is available in production
+gem "rswag-api"
+gem "rswag-ui"
+
 group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
   gem "debug", platforms: %i[ mri windows ], require: "debug/prelude"
@@ -52,10 +56,8 @@ group :development, :test do
   gem "rubocop-rails-omakase", require: false
   gem "rubocop-rspec", require: false
 
-  # API documentation [https://github.com/rswag/rswag]
+  # Generates swagger.json from request specs — test-only tooling
   gem "rswag-specs"
-  gem "rswag-api"
-  gem "rswag-ui"
 
   # Testing framework and helpers
   gem "rspec-rails", "~> 8.0"
