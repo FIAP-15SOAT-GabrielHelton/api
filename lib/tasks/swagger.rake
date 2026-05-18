@@ -9,7 +9,9 @@ end
 
 # Enforce both flags even when rswag:specs:swaggerize is invoked directly.
 # Runs as a prerequisite so the env vars are set before RSpec loads specs.
-Rake::Task["rswag:specs:swaggerize"].enhance([ "swagger:enforce_dry_run" ])
+if Rake::Task.task_defined?("rswag:specs:swaggerize")
+  Rake::Task["rswag:specs:swaggerize"].enhance([ "swagger:enforce_dry_run" ])
+end
 
 namespace :swagger do
   task enforce_dry_run: :environment do
