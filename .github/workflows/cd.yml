@@ -1,0 +1,108 @@
+name: CD
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: cd-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: oficina-mecanica
+  ECS_CLUSTER: cluster-oficina
+  ECS_SERVICE_WEB: svc-web
+  ECS_SERVICE_JOBS: svc-jobs
+  TASK_FAMILY_WEB: tsk-oficina-web
+  TASK_FAMILY_JOBS: tsk-oficina-jobs
+  CONTAINER_WEB: web
+  CONTAINER_JOBS: jobs
+
+jobs:
+  deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-24.04-arm
+
+    steps:
+      - name: Checkout code at the commit that passed CI
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push image to ECR (linux/arm64)
+        id: build-image
+        env:
+          REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+          IMAGE_TAG: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          IMAGE_URI="$REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          LATEST_URI="$REGISTRY/$ECR_REPOSITORY:latest"
+          docker buildx build \
+            --platform linux/arm64 \
+            --provenance=false \
+            --push \
+            -t "$IMAGE_URI" \
+            -t "$LATEST_URI" \
+            .
+          echo "image=$IMAGE_URI" >> "$GITHUB_OUTPUT"
+
+      - name: Download current task definitions
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition "$TASK_FAMILY_WEB" \
+            --query taskDefinition > td-web.json
+          aws ecs describe-task-definition \
+            --task-definition "$TASK_FAMILY_JOBS" \
+            --query taskDefinition > td-jobs.json
+
+      - name: Render task definition (web)
+        id: td-web
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: td-web.json
+          container-name: ${{ env.CONTAINER_WEB }}
+          image: ${{ steps.build-image.outputs.image }}
+
+      - name: Deploy web service
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.td-web.outputs.task-definition }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          service: ${{ env.ECS_SERVICE_WEB }}
+          wait-for-service-stability: true
+
+      - name: Render task definition (jobs)
+        id: td-jobs
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: td-jobs.json
+          container-name: ${{ env.CONTAINER_JOBS }}
+          image: ${{ steps.build-image.outputs.image }}
+
+      - name: Deploy jobs service
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.td-jobs.outputs.task-definition }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          service: ${{ env.ECS_SERVICE_JOBS }}
+          wait-for-service-stability: true
