@@ -6,14 +6,14 @@ module Api
       def index
         result = list_inventory_items.call
 
-        render json: result.value.map { |i| serialize(i) }
+        render json: result.value.map { |i| Inventory::Presenters::InventoryItem.call(i) }
       end
 
       def show
         result = find_inventory_item.call(id: params[:id])
 
         if result.success?
-          render json: serialize(result.value)
+          render json: Inventory::Presenters::InventoryItem.call(result.value)
         else
           render json: { error: result.error }, status: :not_found
         end
@@ -23,7 +23,7 @@ module Api
         result = register_inventory_item.call(**create_params)
 
         if result.success?
-          render json: serialize(result.value), status: :created
+          render json: Inventory::Presenters::InventoryItem.call(result.value), status: :created
         else
           render json: { error: result.error }, status: :unprocessable_entity
         end
@@ -33,7 +33,7 @@ module Api
         result = update_inventory_item.call(id: params[:id], **update_params)
 
         if result.success?
-          render json: serialize(result.value)
+          render json: Inventory::Presenters::InventoryItem.call(result.value)
         else
           render json: { error: result.error }, status: :unprocessable_entity
         end
@@ -43,7 +43,7 @@ module Api
         result = deactivate_inventory_item.call(id: params[:id])
 
         if result.success?
-          render json: serialize(result.value)
+          render json: Inventory::Presenters::InventoryItem.call(result.value)
         else
           render json: { error: result.error }, status: :unprocessable_entity
         end
@@ -53,7 +53,7 @@ module Api
         result = add_quantity_use_case.call(id: params[:id], amount: movement_amount)
 
         if result.success?
-          render json: serialize(result.value)
+          render json: Inventory::Presenters::InventoryItem.call(result.value)
         else
           render json: { error: result.error }, status: :unprocessable_entity
         end
@@ -63,7 +63,7 @@ module Api
         result = decrease_quantity_use_case.call(id: params[:id], amount: movement_amount)
 
         if result.success?
-          render json: serialize(result.value)
+          render json: Inventory::Presenters::InventoryItem.call(result.value)
         else
           render json: { error: result.error }, status: :unprocessable_entity
         end
@@ -115,20 +115,6 @@ module Api
 
       def update_params
         params.permit(:name, :description, :unit_price, :minimum_quantity).to_h.symbolize_keys
-      end
-
-      def serialize(item)
-        {
-          id: item.id,
-          name: item.name,
-          description: item.description,
-          code: item.code,
-          unit_price: item.unit_price.format,
-          quantity: item.quantity.to_i,
-          minimum_quantity: item.minimum_quantity.to_i,
-          below_minimum: item.below_minimum?,
-          active: item.active
-        }
       end
     end
   end

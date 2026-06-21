@@ -7,7 +7,7 @@ module Api
         result = list_work_orders.call(**list_params)
 
         render json: {
-          data: result.value[:entries].map { |wo| serialize(wo) },
+          data: result.value[:entries].map { |wo| WorkOrders::Presenters::WorkOrder.call(wo) },
           pagination: {
             page: result.value[:page],
             per_page: result.value[:per_page],
@@ -21,7 +21,7 @@ module Api
         result = find_work_order_details.call(id: params[:id])
 
         if result.success?
-          render json: serialize_details(result.value)
+          render json: WorkOrders::Presenters::Details.call(result.value)
         else
           render json: { error: result.error }, status: :not_found
         end
@@ -30,14 +30,14 @@ module Api
       def ready_to_execute
         result = list_approved_work_orders.call
 
-        render json: result.value.map { |wo| serialize(wo) }
+        render json: result.value.map { |wo| WorkOrders::Presenters::WorkOrder.call(wo) }
       end
 
       def create
         result = create_work_order.call(**create_params)
 
         if result.success?
-          render json: serialize(result.value), status: :created
+          render json: WorkOrders::Presenters::WorkOrder.call(result.value), status: :created
         else
           render json: { error: result.error }, status: :unprocessable_entity
         end
@@ -47,7 +47,7 @@ module Api
         result = assign_work_order.call(id: params[:id], mechanic_id: params[:mechanic_id])
 
         if result.success?
-          render json: serialize(result.value)
+          render json: WorkOrders::Presenters::WorkOrder.call(result.value)
         else
           render json: { error: result.error }, status: :unprocessable_entity
         end
@@ -62,7 +62,7 @@ module Api
         )
 
         if result.success?
-          render json: serialize(result.value), status: :created
+          render json: WorkOrders::Presenters::WorkOrder.call(result.value), status: :created
         else
           render json: { error: result.error }, status: :unprocessable_entity
         end
@@ -72,7 +72,7 @@ module Api
         result = diagnose_work_order.call(id: params[:id])
 
         if result.success?
-          render json: serialize(result.value)
+          render json: WorkOrders::Presenters::WorkOrder.call(result.value)
         else
           render json: { error: result.error }, status: :unprocessable_entity
         end
@@ -82,7 +82,7 @@ module Api
         result = execute_service.call(id: params[:id])
 
         if result.success?
-          render json: serialize(result.value)
+          render json: WorkOrders::Presenters::WorkOrder.call(result.value)
         else
           render json: { error: result.error }, status: :unprocessable_entity
         end
@@ -92,7 +92,7 @@ module Api
         result = complete_work_order.call(id: params[:id])
 
         if result.success?
-          render json: serialize(result.value)
+          render json: WorkOrders::Presenters::WorkOrder.call(result.value)
         else
           render json: { error: result.error }, status: :unprocessable_entity
         end
@@ -102,7 +102,7 @@ module Api
         result = deliver_work_order.call(id: params[:id])
 
         if result.success?
-          render json: serialize(result.value)
+          render json: WorkOrders::Presenters::WorkOrder.call(result.value)
         else
           render json: { error: result.error }, status: :unprocessable_entity
         end
@@ -112,7 +112,7 @@ module Api
         result = start_line_item_service.call(work_order_id: params[:id], line_item_id: params[:line_item_id])
 
         if result.success?
-          render json: serialize(result.value)
+          render json: WorkOrders::Presenters::WorkOrder.call(result.value)
         else
           render json: { error: result.error }, status: :unprocessable_entity
         end
@@ -122,7 +122,7 @@ module Api
         result = finish_line_item_service.call(work_order_id: params[:id], line_item_id: params[:line_item_id])
 
         if result.success?
-          render json: serialize(result.value)
+          render json: WorkOrders::Presenters::WorkOrder.call(result.value)
         else
           render json: { error: result.error }, status: :unprocessable_entity
         end
@@ -224,81 +224,6 @@ module Api
       def list_params
         params.permit(:status, :customer_id, :mechanic_id, :start_date, :end_date, :page, :per_page)
               .to_h.symbolize_keys
-      end
-
-      def serialize(work_order)
-        {
-          id: work_order.id,
-          customer_id: work_order.customer_id,
-          vehicle_id: work_order.vehicle_id,
-          problem_description: work_order.problem_description,
-          status: work_order.status.to_s,
-          mechanic_id: work_order.mechanic_id,
-          line_items: work_order.line_items.map { |item| serialize_line_item(item) },
-          protocol: work_order.protocol,
-          executed_at: work_order.executed_at,
-          completed_at: work_order.completed_at,
-          delivered_at: work_order.delivered_at,
-          total_execution_time_minutes: work_order.total_execution_time_minutes,
-          average_service_duration_minutes: work_order.average_service_duration_minutes,
-          created_at: work_order.created_at,
-          updated_at: work_order.updated_at
-        }
-      end
-
-      def serialize_details(details)
-        serialize(details[:work_order]).merge(
-          customer: serialize_customer(details[:customer]),
-          vehicle: serialize_vehicle(details[:vehicle]),
-          quote: serialize_quote(details[:quote])
-        )
-      end
-
-      def serialize_customer(customer)
-        return nil unless customer
-
-        {
-          id: customer.id, name: customer.name,
-          document: customer.document.formatted, email: customer.email, phone: customer.phone
-        }
-      end
-
-      def serialize_vehicle(vehicle)
-        return nil unless vehicle
-
-        {
-          id: vehicle.id, license_plate: vehicle.license_plate.value,
-          make: vehicle.make, model: vehicle.model, year: vehicle.year,
-          color: vehicle.color
-        }
-      end
-
-      def serialize_quote(quote)
-        return nil unless quote
-
-        {
-          id: quote.id, status: quote.status.to_s,
-          total: quote.total.format,
-          line_items: quote.line_items.map do |item|
-            {
-              description: item.description, quantity: item.quantity,
-              unit_price: item.unit_price.format, subtotal: item.subtotal.format
-            }
-          end
-        }
-      end
-
-      def serialize_line_item(item)
-        {
-          id: item.id,
-          item_type: item.item_type,
-          reference_id: item.reference_id,
-          name_snapshot: item.name_snapshot,
-          price_snapshot: item.price_snapshot.format,
-          quantity: item.quantity,
-          started_at: item.started_at,
-          finished_at: item.finished_at
-        }
       end
     end
   end

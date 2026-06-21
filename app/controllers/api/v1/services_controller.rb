@@ -6,14 +6,14 @@ module Api
       def index
         result = list_services.call
 
-        render json: result.value.map { |s| serialize(s) }
+        render json: result.value.map { |s| Registrations::Presenters::Service.call(s) }
       end
 
       def show
         result = find_service.call(id: params[:id])
 
         if result.success?
-          render json: serialize(result.value)
+          render json: Registrations::Presenters::Service.call(result.value)
         else
           render json: { error: result.error }, status: :not_found
         end
@@ -28,7 +28,7 @@ module Api
         )
 
         if result.success?
-          render json: serialize(result.value), status: :created
+          render json: Registrations::Presenters::Service.call(result.value), status: :created
         else
           render json: { error: result.error }, status: :unprocessable_entity
         end
@@ -41,7 +41,7 @@ module Api
         )
 
         if result.success?
-          render json: serialize(result.value)
+          render json: Registrations::Presenters::Service.call(result.value)
         else
           render json: { error: result.error }, status: :unprocessable_entity
         end
@@ -51,7 +51,7 @@ module Api
         result = deactivate_service.call(id: params[:id])
 
         if result.success?
-          render json: serialize(result.value)
+          render json: Registrations::Presenters::Service.call(result.value)
         else
           render json: { error: result.error }, status: :unprocessable_entity
         end
@@ -90,17 +90,6 @@ module Api
         permitted[:base_price] = params[:base_price] if params.key?(:base_price)
         permitted[:estimated_duration_minutes] = params[:estimated_duration_minutes] if params.key?(:estimated_duration_minutes)
         permitted
-      end
-
-      def serialize(service)
-        {
-          id: service.id,
-          name: service.name,
-          description: service.description,
-          base_price: service.base_price.format,
-          estimated_duration_minutes: service.estimated_duration_minutes,
-          active: service.active
-        }
       end
     end
   end
