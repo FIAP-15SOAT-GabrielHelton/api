@@ -47,7 +47,20 @@ RSpec.describe 'Api::V1::WorkOrders', openapi_spec: 'v1/swagger.json', type: :re
         properties: {
           customer_id: { type: :integer },
           vehicle_id: { type: :integer },
-          problem_description: { type: :string }
+          problem_description: { type: :string },
+          line_items: {
+            type: :array,
+            description: 'Optional pre-filled items (services/parts). When present the OS starts in diagnosing status.',
+            items: {
+              type: :object,
+              properties: {
+                item_type: { type: :string, enum: %w[service part] },
+                reference_id: { type: :integer },
+                quantity: { type: :integer }
+              },
+              required: %w[item_type reference_id quantity]
+            }
+          }
         },
         required: %w[customer_id vehicle_id problem_description]
       }
