@@ -85,7 +85,7 @@ RSpec.describe Persistence::WorkOrders::ActiveRecordWorkOrderRepository, "#searc
     expect(result[:total]).to eq(1)
   end
 
-  it "paginates and orders by created_at desc" do
+  it "paginates results" do
     25.times { |i| create_wo(customer_id: customer_id, vehicle_id: vehicle_id, created_at: i.minutes.ago) }
 
     page1 = repository.search(page: 1, per_page: 10)
@@ -96,6 +96,47 @@ RSpec.describe Persistence::WorkOrders::ActiveRecordWorkOrderRepository, "#searc
     expect(page1[:entries].size).to eq(10)
     expect(page2[:entries].size).to eq(10)
     expect(page3[:entries].size).to eq(5)
-    expect(page1[:entries].first.created_at).to be > page2[:entries].first.created_at
+  end
+
+  it "excludes completed and delivered by default" do
+    create_wo(customer_id: customer_id, vehicle_id: vehicle_id, status: "received")
+    create_wo(customer_id: customer_id, vehicle_id: vehicle_id, status: "completed")
+    create_wo(customer_id: customer_id, vehicle_id: vehicle_id, status: "delivered")
+
+    result = repository.search
+
+    expect(result[:total]).to eq(1)
+    expect(result[:entries].first.status.to_s).to eq("received")
+  end
+
+  it "includes completed and delivered when filtering by status explicitly" do
+    create_wo(customer_id: customer_id, vehicle_id: vehicle_id, status: "completed")
+    create_wo(customer_id: customer_id, vehicle_id: vehicle_id, status: "received")
+
+    result = repository.search(criteria: { status: :completed })
+
+    expect(result[:total]).to eq(1)
+    expect(result[:entries].first.status.to_s).to eq("completed")
+  end
+
+  it "orders by status priority: in_progress first, then awaiting_approval, diagnosing, received" do
+    t = Time.now
+    create_wo(customer_id: customer_id, vehicle_id: vehicle_id, status: "received",          created_at: t)
+    create_wo(customer_id: customer_id, vehicle_id: vehicle_id, status: "diagnosing",        created_at: t)
+    create_wo(customer_id: customer_id, vehicle_id: vehicle_id, status: "awaiting_approval", created_at: t)
+    create_wo(customer_id: customer_id, vehicle_id: vehicle_id, status: "in_progress",       created_at: t)
+
+    statuses = repository.search[:entries].map { |e| e.status.to_s }
+
+    expect(statuses).to eq(%w[in_progress awaiting_approval diagnosing received])
+  end
+
+  it "orders by created_at asc within the same status" do
+    create_wo(customer_id: customer_id, vehicle_id: vehicle_id, status: "received", created_at: 5.minutes.ago)
+    create_wo(customer_id: customer_id, vehicle_id: vehicle_id, status: "received", created_at: 1.minute.ago)
+
+    entries = repository.search[:entries]
+
+    expect(entries.first.created_at).to be < entries.last.created_at
   end
 end

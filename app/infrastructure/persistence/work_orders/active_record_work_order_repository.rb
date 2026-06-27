@@ -40,9 +40,10 @@ module Persistence
 
       def search(criteria: {}, page: 1, per_page: 20)
         scope = apply_filters(WorkOrderRecord.includes(:line_item_records), criteria)
+        scope = scope.where.not(status: %w[completed delivered]) unless criteria[:status]
         total = scope.count
         entries = scope
-          .order(created_at: :desc)
+          .order(status_priority_order, created_at: :asc)
           .limit(per_page)
           .offset((page - 1) * per_page)
           .map { |record| to_entity(record) }
@@ -55,6 +56,19 @@ module Persistence
       end
 
       private
+
+      def status_priority_order
+        Arel.sql(<<~SQL.squish)
+          CASE status
+            WHEN 'in_progress'       THEN 0
+            WHEN 'awaiting_approval' THEN 1
+            WHEN 'approved'          THEN 2
+            WHEN 'diagnosing'        THEN 3
+            WHEN 'received'          THEN 4
+            ELSE                          5
+          END
+        SQL
+      end
 
       def apply_filters(scope, criteria)
         scope = scope.where(status: criteria[:status].to_s) if criteria[:status]
