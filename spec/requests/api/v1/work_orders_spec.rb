@@ -194,6 +194,29 @@ RSpec.describe 'Api::V1::WorkOrders', openapi_spec: 'v1/swagger.json', type: :re
     end
   end
 
+  path '/api/v1/work_orders/{id}/reject' do
+    patch 'Reject work order (status → rejected) — valid from received or diagnosing' do
+      tags 'Work Orders'
+      produces 'application/json'
+      security [ { bearerAuth: [] } ]
+      parameter name: :id, in: :path, type: :integer, required: true
+
+      response '200', 'work order rejected' do
+        schema '$ref' => '#/components/schemas/WorkOrder'
+        run_test!
+      end
+
+      response '422', 'unprocessable entity' do
+        schema '$ref' => '#/components/schemas/Error'
+        run_test!
+      end
+
+      response '401', 'unauthorized' do
+        run_test!
+      end
+    end
+  end
+
   path '/api/v1/work_orders/{id}/execute' do
     patch 'Start execution (status → in_progress)' do
       tags 'Work Orders'

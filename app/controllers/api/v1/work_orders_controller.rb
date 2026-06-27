@@ -78,6 +78,16 @@ module Api
         end
       end
 
+      def reject
+        result = reject_work_order.call(id: params[:id])
+
+        if result.success?
+          render json: WorkOrders::Presenters::WorkOrder.call(result.value)
+        else
+          render json: { error: result.error }, status: :unprocessable_entity
+        end
+      end
+
       def execute
         result = execute_service.call(id: params[:id])
 
@@ -195,6 +205,10 @@ module Api
           service_repository: Persistence::Registrations::ActiveRecordServiceRepository.new,
           inventory_item_repository: Persistence::Inventory::ActiveRecordInventoryItemRepository.new
         )
+      end
+
+      def reject_work_order
+        WorkOrders::RejectWorkOrder.new(work_order_repository: work_order_repository)
       end
 
       def execute_service

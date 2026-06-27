@@ -371,6 +371,41 @@ RSpec.describe "Api::V1::WorkOrders", type: :request do
     end
   end
 
+  describe "PATCH /api/v1/work_orders/:id/reject" do
+    it "rejects a work order in received status" do
+      customer_id = create_customer
+      vehicle_id = create_vehicle(customer_id)
+      wo_id = create_work_order(customer_id, vehicle_id)
+
+      patch "/api/v1/work_orders/#{wo_id}/reject", headers: auth_headers, as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body["status"]).to eq("rejected")
+    end
+
+    it "rejects a work order in diagnosing status" do
+      customer_id = create_customer
+      vehicle_id = create_vehicle(customer_id)
+      wo_id = create_work_order(customer_id, vehicle_id)
+      patch "/api/v1/work_orders/#{wo_id}/assign", params: { mechanic_id: default_test_mechanic.id }, headers: auth_headers, as: :json
+
+      patch "/api/v1/work_orders/#{wo_id}/reject", headers: auth_headers, as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body["status"]).to eq("rejected")
+    end
+
+    it "returns 422 when rejecting from an invalid status (in_progress)" do
+      result = setup_approved_work_order
+      wo_id  = result[:wo_id]
+      patch "/api/v1/work_orders/#{wo_id}/execute", headers: auth_headers, as: :json
+
+      patch "/api/v1/work_orders/#{wo_id}/reject", headers: auth_headers, as: :json
+
+      expect(response).to have_http_status(:unprocessable_content)
+    end
+  end
+
   def setup_two_service_work_order_in_progress
     customer_id = create_customer
     vehicle_id = create_vehicle(customer_id)
