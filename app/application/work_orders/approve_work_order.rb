@@ -2,11 +2,13 @@
 
 require_relative "../shared/result"
 require_relative "../shared/use_case"
+require_relative "../shared/work_order_notifier"
 
 module WorkOrders
   class ApproveWorkOrder < Shared::UseCase
-    def initialize(work_order_repository:)
+    def initialize(work_order_repository:, notifier: Shared::NullNotifier.new)
       @repository = work_order_repository
+      @notifier = notifier
     end
 
     private
@@ -16,7 +18,9 @@ module WorkOrders
       return Shared::Result.failure("Work order not found") unless work_order
 
       work_order.approve
-      Shared::Result.success(@repository.save(work_order))
+      saved = @repository.save(work_order)
+      @notifier.notify_status_changed(saved)
+      Shared::Result.success(saved)
     end
   end
 end
