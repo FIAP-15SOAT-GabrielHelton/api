@@ -181,7 +181,8 @@ module Api
       def diagnose_work_order
         WorkOrders::DiagnoseWorkOrder.new(
           work_order_repository: work_order_repository,
-          create_quote: Quotes::CreateQuote.new(quote_repository: quote_repository)
+          create_quote: Quotes::CreateQuote.new(quote_repository: quote_repository),
+          notifier: notifier
         )
       end
 
@@ -202,11 +203,15 @@ module Api
       end
 
       def complete_work_order
-        WorkOrders::CompleteWorkOrder.new(work_order_repository: work_order_repository)
+        WorkOrders::CompleteWorkOrder.new(work_order_repository: work_order_repository, notifier: notifier)
       end
 
       def deliver_work_order
-        WorkOrders::DeliverWorkOrder.new(work_order_repository: work_order_repository)
+        WorkOrders::DeliverWorkOrder.new(work_order_repository: work_order_repository, notifier: notifier)
+      end
+
+      def notifier
+        @notifier ||= Shared::WorkOrderNotifier.new(customer_repository: customer_repository)
       end
 
       def start_line_item_service

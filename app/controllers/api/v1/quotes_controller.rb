@@ -68,7 +68,10 @@ module Api
       def approve_quote
         Quotes::ApproveQuote.new(
           quote_repository: repository,
-          approve_work_order: WorkOrders::ApproveWorkOrder.new(work_order_repository: work_order_repository),
+          approve_work_order: WorkOrders::ApproveWorkOrder.new(
+            work_order_repository: work_order_repository,
+            notifier: notifier
+          ),
           decrease_quantity: Inventory::DecreaseQuantity.new(inventory_item_repository: inventory_item_repository)
         )
       end
@@ -76,8 +79,19 @@ module Api
       def reject_quote
         Quotes::RejectQuote.new(
           quote_repository: repository,
-          reject_work_order: WorkOrders::RejectWorkOrder.new(work_order_repository: work_order_repository)
+          reject_work_order: WorkOrders::RejectWorkOrder.new(
+            work_order_repository: work_order_repository,
+            notifier: notifier
+          )
         )
+      end
+
+      def customer_repository
+        @customer_repository ||= Persistence::Registrations::ActiveRecordCustomerRepository.new
+      end
+
+      def notifier
+        @notifier ||= Shared::WorkOrderNotifier.new(customer_repository: customer_repository)
       end
     end
   end

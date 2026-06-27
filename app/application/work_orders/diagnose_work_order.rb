@@ -2,12 +2,14 @@
 
 require_relative "../shared/result"
 require_relative "../shared/use_case"
+require_relative "../shared/work_order_notifier"
 
 module WorkOrders
   class DiagnoseWorkOrder < Shared::UseCase
-    def initialize(work_order_repository:, create_quote:)
+    def initialize(work_order_repository:, create_quote:, notifier: Shared::NullNotifier.new)
       @repository = work_order_repository
       @create_quote = create_quote
+      @notifier = notifier
     end
 
     private
@@ -24,6 +26,7 @@ module WorkOrders
         raise "Failed to create quote: #{quote_result.error}" unless quote_result.success?
       end
 
+      @notifier.notify_status_changed(work_order)
       Shared::Result.success(work_order)
     end
   end

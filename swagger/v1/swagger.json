@@ -1837,6 +1837,33 @@
                   },
                   "problem_description": {
                     "type": "string"
+                  },
+                  "line_items": {
+                    "type": "array",
+                    "description": "Optional pre-filled items (services/parts). When present the OS starts in diagnosing status.",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "item_type": {
+                          "type": "string",
+                          "enum": [
+                            "service",
+                            "part"
+                          ]
+                        },
+                        "reference_id": {
+                          "type": "integer"
+                        },
+                        "quantity": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "item_type",
+                        "reference_id",
+                        "quantity"
+                      ]
+                    }
                   }
                 },
                 "required": [

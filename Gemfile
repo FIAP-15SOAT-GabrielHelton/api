@@ -42,6 +42,10 @@ gem "ostruct"
 gem "rswag-api"
 gem "rswag-ui"
 
+group :development do
+  gem "letter_opener_web"
+end
+
 group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
   gem "debug", platforms: %i[ mri windows ], require: "debug/prelude"
