@@ -150,7 +150,9 @@ module Api
         WorkOrders::CreateWorkOrder.new(
           work_order_repository: work_order_repository,
           customer_repository: customer_repository,
-          vehicle_repository: vehicle_repository
+          vehicle_repository: vehicle_repository,
+          service_repository: Persistence::Registrations::ActiveRecordServiceRepository.new,
+          inventory_item_repository: Persistence::Inventory::ActiveRecordInventoryItemRepository.new
         )
       end
 
@@ -218,7 +220,10 @@ module Api
       end
 
       def create_params
-        params.permit(:customer_id, :vehicle_id, :problem_description).to_h.symbolize_keys
+        permitted = params.permit(:customer_id, :vehicle_id, :problem_description,
+                                  line_items: [:item_type, :reference_id, :quantity])
+        permitted[:line_items] = (permitted[:line_items] || []).map(&:to_h).map(&:symbolize_keys)
+        permitted.to_h.symbolize_keys
       end
 
       def list_params
