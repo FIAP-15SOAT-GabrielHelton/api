@@ -104,27 +104,27 @@ describe WorkOrders::CreateWorkOrder do
       end
 
       it "snapshots name from service" do
-        result = use_case.call(**valid_params, line_items: [{ item_type: "service", reference_id: 1, quantity: 1 }])
+        result = use_case.call(**valid_params, line_items: [ { item_type: "service", reference_id: 1, quantity: 1 } ])
 
         expect(result.value.line_items.first.name_snapshot).to eq("Oil change")
       end
 
       it "returns failure when service is not found" do
-        result = use_case.call(**valid_params, line_items: [{ item_type: "service", reference_id: 999, quantity: 1 }])
+        result = use_case.call(**valid_params, line_items: [ { item_type: "service", reference_id: 999, quantity: 1 } ])
 
         expect(result).to be_failure
         expect(result.error).to eq("Service not found")
       end
 
       it "returns failure when part is not found" do
-        result = use_case.call(**valid_params, line_items: [{ item_type: "part", reference_id: 999, quantity: 1 }])
+        result = use_case.call(**valid_params, line_items: [ { item_type: "part", reference_id: 999, quantity: 1 } ])
 
         expect(result).to be_failure
         expect(result.error).to eq("Inventory item not found")
       end
 
       it "returns failure for unknown item_type" do
-        result = use_case.call(**valid_params, line_items: [{ item_type: "unknown", reference_id: 1, quantity: 1 }])
+        result = use_case.call(**valid_params, line_items: [ { item_type: "unknown", reference_id: 1, quantity: 1 } ])
 
         expect(result).to be_failure
         expect(result.error).to match(/Unknown item_type/)
