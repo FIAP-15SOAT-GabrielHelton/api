@@ -91,7 +91,11 @@ module Api
       end
 
       def notifier
-        @notifier ||= Shared::WorkOrderNotifier.new(customer_repository: customer_repository)
+        @notifier ||= Shared::WorkOrderNotifier.new(
+          notifiers: [
+            Shared::WorkOrderEmailNotifier.new(customer_repository: customer_repository)
+          ]
+        )
       end
     end
   end
