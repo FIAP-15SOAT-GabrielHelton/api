@@ -30,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # Mascara credenciais AWS e secrets do repositório nos logs deste job.
       # Deve ser o primeiro step executável do job.
@@ -43,7 +43,7 @@ jobs:
           echo "::add-mask::${{ secrets.SECRET_KEY_BASE }}"
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           aws-access-key-id: ${{ inputs.aws_access_key_id }}
           aws-secret-access-key: ${{ inputs.aws_secret_access_key }}
@@ -71,7 +71,7 @@ jobs:
       # terraform_wrapper: false evita que o wrapper adicione texto extra ao stdout,
       # garantindo que terraform output -raw capture valores limpos no GITHUB_OUTPUT.
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+        uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: 1.5.7
           terraform_wrapper: false
@@ -151,7 +151,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # Mascaramento repetido pois cada job tem seu próprio contexto de logs.
       - name: Mask Sensitive Credentials

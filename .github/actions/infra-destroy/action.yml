@@ -28,7 +28,7 @@ runs:
         echo "::add-mask::${{ inputs.db_password }}"
 
     - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v4
+      uses: aws-actions/configure-aws-credentials@v6
       with:
         aws-access-key-id: ${{ inputs.aws_access_key_id }}
         aws-secret-access-key: ${{ inputs.aws_secret_access_key }}
@@ -46,7 +46,7 @@ runs:
 
     # terraform_wrapper: false evita texto extra no stdout capturado pelo terraform output.
     - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v3
+      uses: hashicorp/setup-terraform@v4
       with:
         terraform_version: 1.5.7
         terraform_wrapper: false
