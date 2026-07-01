@@ -30,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # Mascara credenciais AWS nos logs. DB_PASSWORD vem de secrets do repositório
       # e é mascarado automaticamente pelo GitHub, mas explicitamos para garantia.
