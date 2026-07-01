@@ -56,6 +56,11 @@ Rails.application.routes.draw do
       end
 
       get "tracking/:protocol", to: "tracking#show", as: :tracking
+
+      namespace :webhooks do
+        patch "quotes/:id/approve", to: "quotes#approve", as: :quote_approval
+        patch "quotes/:id/reject", to: "quotes#reject", as: :quote_rejection
+      end
     end
   end
 
