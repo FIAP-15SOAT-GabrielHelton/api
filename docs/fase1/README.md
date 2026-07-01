@@ -1,6 +1,6 @@
 # 15SOAT - Fase 1 - Tech Challenge - Grupo 183
 
-> Este é o README original da Fase 1. Para a visão atual do projeto (Fase 2 — Kubernetes, Terraform, CI/CD), veja o [README principal](../../README.md).
+> Este é o README original da Fase 1. Para a visão atual do projeto, veja o [README principal](../../README.md).
 
 MVP do back-end de um sistema de gestão de oficina mecânica, desenvolvido como Tech Challenge de pós-graduação (FIAP). Aplica **Domain-Driven Design (DDD)** em um monolito Rails API-only, com separação explícita de camadas.
 

@@ -1,50 +1,96 @@
 # 15SOAT - Fase 2 - Tech Challenge - Grupo 183
 
-Sistema de gestão de oficina mecânica: uma API Rails que cobre todo o ciclo de vida de uma Ordem de Serviço (OS), da abertura ao orçamento, aprovação e entrega do veículo. A Fase 1 (Tech Challenge de pós-graduação FIAP) entregou a aplicação em **Domain-Driven Design (DDD)**; a Fase 2 evolui o projeto para **infraestrutura em nuvem produtiva**: cluster **Kubernetes (AWS EKS)** provisionado via **Terraform**, banco gerenciado **RDS**, deploy automatizado por **CI/CD** e **escalabilidade automática (HPA)**.
+Sistema de gestão de oficina mecânica: uma API Rails que cobre todo o ciclo de vida de uma Ordem de Serviço (OS), da abertura ao orçamento, aprovação e entrega do veículo. A Fase 1 (Tech Challenge de pós-graduação FIAP) entregou a aplicação em **Domain-Driven Design (DDD)**; a Fase 2 evolui tanto o **código** (Clean Code, Clean Architecture, novas APIs) quanto a **infraestrutura**: cluster **Kubernetes (AWS EKS)** provisionado via **Terraform**, banco gerenciado **RDS**, deploy automatizado por **CI/CD** e **escalabilidade automática (HPA)**.
 
 > A documentação completa da Fase 1 (arquitetura DDD, bounded contexts, event storming, walkthrough da API e scanners de segurança) foi preservada em [`docs/fase1/`](docs/fase1/README.md).
 
 ## Objetivos desta fase
 
-- Migrar o deploy de ECS para **Kubernetes (EKS)**, com toda a infraestrutura como código.
+- Refatorar o código existente aplicando **Clean Code** e reforçando a **Clean Architecture** já iniciada na Fase 1, sem abrir mão das regras de negócio.
+- Ajustar e criar **APIs** conforme especificação: abertura de OS com serviços/peças, listagem ordenada com exclusão lógica, notificação de status por e-mail e rejeição de OS.
 - Provisionar a infraestrutura (VPC, cluster, banco, registry) de forma **reproduzível e descartável** via Terraform — essencial no AWS Academy, onde a conta é temporária.
-- Automatizar o ciclo completo via **GitHub Actions**: provisionar → buildar imagem → aplicar manifests → autodestruir por segurança.
+- Automatizar o ciclo completo de CI/CD via **GitHub Actions**: provisionar → buildar imagem → aplicar manifests → autodestruir por segurança.
 - Expor **autoscaling horizontal (HPA)** da aplicação conforme a carga de CPU/memória.
-- Manter as regras de negócio e a arquitetura DDD da Fase 1 intactas — esta fase é sobre infraestrutura, não sobre reescrever domínio.
+
+## Evolução da aplicação (Clean Code / Clean Architecture)
+
+A Fase 1 já estabeleceu a separação em camadas (`domains → application → infrastructure`, `controllers/jobs` como interface — [detalhes aqui](docs/fase1/README.md#arquitetura)). Nesta fase o código foi refatorado para reforçar essa separação e novas APIs foram implementadas conforme a especificação.
+
+### Refatorações
+
+| Mudança                                                              | Motivação                                                                                                                                                                                                                                                                   |
+| -------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Camada de Presenters** (`app/application/<domínio>/presenters/`)   | Controllers formatavam JSON manualmente e acessavam value objects de domínio (`Money`, `Document`, `LicensePlate`) diretamente. A serialização de saída virou responsabilidade de uma camada própria, mantendo a regra de dependência `controllers → application → domains` |
+| **`WorkOrderNotifier` como orquestrador + `WorkOrderEmailNotifier`** | A notificação de mudança de status estava acoplada a e-mail. Virou um orquestrador _channel-agnostic_ que despacha para uma lista de notifiers — hoje só e-mail; adicionar SMS/push é um item novo na lista, sem tocar nos use cases                                        |
+
+### APIs alteradas/criadas
+
+| Requisito                                                                            | Implementação                                                                                                                                                                                                                                                            |
+| ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Abertura de OS recebendo cliente, veículo, serviços e peças                          | `POST /api/v1/work_orders` passou a aceitar `line_items` já na criação, sem alterar o comportamento anterior (sem `line_items`, a OS continua abrindo como `received`)                                                                                                   |
+| Listagem de OS ordenada por status, mais antigas primeiro, sem finalizadas/entregues | `ActiveRecordWorkOrderRepository#search`: ordena por prioridade operacional (`in_progress → awaiting_approval → diagnosing → received`) e oculta `completed`/`delivered` do resultado padrão (exclusão lógica, não física)                                               |
+| Aprovação/recusa de orçamento (endpoint para notificação externa)                    | Já implementado na Fase 1 (`PATCH /api/v1/quotes/:id/approve\|reject`); complementado nesta fase com `PATCH /api/v1/work_orders/:id/reject`, cobrindo as transições `received/diagnosing → rejected` da OS                                                               |
+| Atualização de status da OS via e-mail _(ver nota abaixo)_                           | `WorkOrderMailer#status_changed`, disparado de forma assíncrona (Solid Queue) nas transições de diagnóstico, aprovação, conclusão, entrega e rejeição — notifica o cliente por e-mail a cada mudança de status. SendGrid em produção, `letter_opener` em desenvolvimento |
+
+> **Nota sobre a "atualização de status via e-mail":** o que implementamos é a notificação _de saída_ — a aplicação envia um e-mail ao cliente sempre que o status da OS muda. Após a apresentação do Tech Challenge, entendemos que o requisito pedia o caminho inverso: uma integração _externa_ (por exemplo, ler um e-mail do cliente aprovando o orçamento) capaz de alterar o status da OS diretamente. Optamos deliberadamente por não expor um endpoint que aceite essa mutação direta de status vinda de fora do sistema: no domínio da aplicação, toda transição de estado da OS passa exclusivamente pelos casos de uso (`app/application/work_orders/`), que validam a máquina de estados antes de qualquer mudança. Um endpoint que gravasse status diretamente a partir de um evento externo (como o conteúdo de um e-mail) contornaria essas garantias — e, mesmo reimplementando ali as mesmas validações, duplicaríamos regra de negócio fora do lugar certo, o que vai contra a própria Clean Architecture que este Tech Challenge pede para reforçar. Estamos documentando essa divergência para o professor e abertos a ajustar a implementação conforme orientação.
+
+### Testes automatizados
+
+98 arquivos de spec (RSpec + FactoryBot + shoulda-matchers), com cobertura mínima de 80% linha/branch **verificada pelo SimpleCov na CI**. Cada mudança acima veio acompanhada de specs novos ou atualizados — unitários em `spec/application`/`spec/infrastructure`, de integração em `spec/requests`.
 
 ## Arquitetura
 
 ### Componentes da aplicação
 
-| Componente          | O que é                                            | Onde roda                       |
-| ------------------- | --------------------------------------------------- | -------------------------------- |
-| **web**              | API Rails (Puma), exposta via `/up`, `/api/v1/*`, `/api-docs` | `Deployment` `oficina-mecanica-web` + `Service` LoadBalancer |
-| **jobs**             | Worker do Solid Queue (e-mails via SendGrid, jobs assíncronos) | `Deployment` `oficina-mecanica-jobs` |
-| **db-prepare**       | `bin/rails db:prepare` (migrations + seed) — roda uma vez por deploy | `Job` do Kubernetes, com `kubectl wait` bloqueando o deploy até concluir |
-| **PostgreSQL**       | Banco único (app + Solid Queue), gerenciado          | RDS (fora do cluster) |
-| **HPA**              | Escala o `web` por CPU (70%) e memória (80%), 1 a 3 réplicas | `HorizontalPodAutoscaler` + `metrics-server` |
-
-A separação em camadas DDD (`domains → application → infrastructure`, `controllers/jobs` como interface) permanece igual à Fase 1 — [detalhes aqui](docs/fase1/README.md#arquitetura).
+| Componente     | O que é                                                              | Onde roda                                                                |
+| -------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| **web**        | API Rails (Puma), exposta via `/up`, `/api/v1/*`, `/api-docs`        | `Deployment` `oficina-mecanica-web` + `Service` LoadBalancer             |
+| **jobs**       | Worker do Solid Queue (e-mails via SendGrid, jobs assíncronos)       | `Deployment` `oficina-mecanica-jobs`                                     |
+| **db-prepare** | `bin/rails db:prepare` (migrations + seed) — roda uma vez por deploy | `Job` do Kubernetes, com `kubectl wait` bloqueando o deploy até concluir |
+| **PostgreSQL** | Banco único (app + Solid Queue), gerenciado                          | RDS (fora do cluster)                                                    |
+| **HPA**        | Escala o `web` por CPU (70%) e memória (80%), 1 a 3 réplicas         | `HorizontalPodAutoscaler` + `metrics-server`                             |
 
 ### Infraestrutura provisionada (Terraform, `infra/`)
 
-```
-                         ┌───────────────────────────── VPC (10.0.0.0/16) ─────────────────────────────┐
-                         │                                                                              │
-Internet ── IGW ── Route │  Subnet pública A (us-east-1a)          Subnet pública B (us-east-1b)        │
-     Table (0.0.0.0/0)   │  ┌──────────────────────────┐           ┌──────────────────────────┐        │
-                         │  │  EKS Node Group           │           │  EKS Node Group           │        │
-                         │  │  (t3.medium, 1–3 nodes)   │◄────────► │  (t3.medium, 1–3 nodes)   │        │
-                         │  └────────────┬─────────────┘           └──────────────┬────────────┘        │
-                         │               │  EKS Control Plane (endpoint público)  │                     │
-                         │               └──────────────────┬──────────────────────┘                    │
-                         └──────────────────────────────────┼───────────────────────────────────────────┘
-                                                              │
-                                              ┌───────────────┴────────────────┐
-                                              │  RDS PostgreSQL (privado)       │
-                                              └─────────────────────────────────┘
+```mermaid
+flowchart TB
+    Internet((Internet))
 
-ECR (registry da imagem Docker) ── metrics-server (Helm, add-on do HPA) ── S3 (backend do tfstate)
+    subgraph VPC["VPC — 10.0.0.0/16"]
+        IGW["Internet Gateway"]
+
+        subgraph SubA["Subnet pública A · us-east-1a"]
+            NodeA["EKS Node Group\nt3.medium"]
+        end
+
+        subgraph SubB["Subnet pública B · us-east-1b"]
+            NodeB["EKS Node Group\nt3.medium"]
+        end
+
+        EKS[["EKS Control Plane\n(endpoint público)"]]
+        RDS[("RDS PostgreSQL\n(privado)")]
+    end
+
+    ECR[["ECR\nimagem Docker"]]
+    MS["metrics-server\n(Helm)"]
+    S3[("S3\nTerraform state")]
+
+    Internet --> IGW --> SubA
+    IGW --> SubB
+    NodeA --- EKS
+    NodeB --- EKS
+    EKS --> RDS
+    ECR -. pull da imagem .-> NodeA
+    ECR -. pull da imagem .-> NodeB
+    MS --- EKS
+
+    classDef net fill:#9bb8ff,stroke:#5470c6,color:#000
+    classDef db fill:#a8e6a2,stroke:#2d8a1f,color:#000
+    classDef ext fill:#ffd38c,stroke:#e58e00,color:#000
+
+    class IGW,NodeA,NodeB,EKS net
+    class RDS,S3 db
+    class ECR,MS,Internet ext
 ```
 
 - **VPC** própria (`infra/vpc.tf`) com 2 subnets públicas (multi-AZ), Internet Gateway e route table — simplificada de propósito (sem NAT Gateway) para reduzir custo/complexidade no AWS Academy.
@@ -54,22 +100,48 @@ ECR (registry da imagem Docker) ── metrics-server (Helm, add-on do HPA) ─�
 - **metrics-server** (`infra/metrics_server.tf`): instalado via provider Helm — pré-requisito para o HPA conseguir ler métricas de CPU/memória dos pods.
 - **Backend do Terraform**: bucket S3 (`oficina-mecanica-tfstate-<account-id>`), criado via AWS CLI no início do pipeline para evitar o problema de "ovo e galinha" (o backend precisa existir antes do `terraform init`).
 
-### Fluxo de deploy (CI/CD)
+### Fluxo de CI
 
-```
-workflow_dispatch (credenciais AWS Academy como input — expiram em ~4h)
-        │
-        ▼
-1. Configura credenciais AWS + cria/reaproveita bucket S3 do tfstate
-2. terraform apply  →  VPC + EKS + node group + RDS + ECR + metrics-server
-3. docker build + push da imagem para o ECR (tag = SHA do commit)
-4. kubectl apply configmap/secrets  →  kubectl apply Job db-prepare (aguarda conclusão)
-        →  kubectl apply web + jobs + service (LoadBalancer) + hpa
-5. Autodestruição de segurança: aguarda 2h e roda o destroy automaticamente
-   (ou dispara manualmente via cd_destroy.yml a qualquer momento)
+Roda em todo `push` na `main` e em toda `pull_request` ([`ci.yml`](.github/workflows/ci.yml)):
+
+```mermaid
+flowchart TB
+    Trigger(["push (main) / pull_request"])
+
+    Trigger --> Lint["lint\nRuboCop"]
+    Trigger --> Test["test\nRSpec + Postgres (service container)"]
+    Trigger -.-> ScanRuby["scan_ruby\nbrakeman + bundler-audit"]
+    Trigger -.-> ScanExtra["scan_extra\nTrivy + Semgrep"]
+
+    Test --> Coverage["Cobertura de linha/branch\n>= 80%, verificada pelo SimpleCov"]
+
+    classDef active fill:#9bb8ff,stroke:#5470c6,color:#000
+    classDef disabled fill:#dddddd,stroke:#999999,color:#555,stroke-dasharray: 5 5
+
+    class Lint,Test,Coverage active
+    class ScanRuby,ScanExtra disabled
 ```
 
-Workflows: [`cd_deploy.yml`](.github/workflows/cd_deploy.yml) (provisiona + deploy + auto-destroy) e [`cd_destroy.yml`](.github/workflows/cd_destroy.yml) (destroy manual imediato), compartilhando a lógica de destruição via a composite action [`infra-destroy`](.github/actions/infra-destroy/action.yml).
+> `scan_ruby` e `scan_extra` estão temporariamente desativados (`if: false` em `ci.yml`) — mantidos no workflow para reativação futura. Detalhes de cada scanner: [`docs/fase1/security.md`](docs/fase1/security.md).
+
+### Fluxo de deploy (CD)
+
+```mermaid
+flowchart TB
+    Trigger(["Disparo MANUAL (workflow_dispatch)\ncredenciais AWS Academy como input"]) --> Provision["Provisiona infraestrutura\nterraform apply: VPC + EKS + RDS + ECR + metrics-server"]
+    Provision --> Build["Build & push da imagem\nECR, tag = SHA do commit"]
+    Build --> Deploy["Deploy no Kubernetes\nmigrations (Job) + web/jobs/service/hpa"]
+    Deploy --> Destroy["Autodestruição de segurança\nsleep 2h → terraform destroy"]
+
+    classDef manual fill:#ffd38c,stroke:#e58e00,color:#000
+    classDef step fill:#9bb8ff,stroke:#5470c6,color:#000
+    classDef danger fill:#ffcccc,stroke:#cc4444,color:#000
+    class Trigger manual
+    class Provision,Build,Deploy step
+    class Destroy danger
+```
+
+Ao contrário do CI (que roda automaticamente em `push`/`pull_request`), o deploy **nunca dispara sozinho**: é sempre acionado manualmente na aba **Actions → CD Deploy (EKS & K8s) → Run workflow**, informando as credenciais temporárias da sessão AWS Academy — mesma lógica do destroy manual imediato ([`cd_destroy.yml`](.github/workflows/cd_destroy.yml)). Detalhe de cada etapa (bootstrap do bucket S3, ConfigMap/Secrets, `kubectl wait` na migration): [`cd_deploy.yml`](.github/workflows/cd_deploy.yml) — ambos compartilham a lógica de destruição via a composite action [`infra-destroy`](.github/actions/infra-destroy/action.yml).
 
 ## Execução local
 
@@ -146,7 +218,7 @@ No pipeline de CI/CD, esses passos são automáticos — incluindo a limpeza de 
 
 ## Vídeo demonstrativo
 
-*(link do vídeo a adicionar aqui)*
+_(link do vídeo a adicionar aqui)_
 
 Roteiro coberto (≤ 15 min): deploy da aplicação, execução do CI/CD, consumo das APIs e escalabilidade automática (HPA sob carga).
 
@@ -166,10 +238,10 @@ Detalhes da estrutura de `spec/` e comandos por camada: [`docs/fase1/README.md`]
 
 ## Documentação adicional
 
-| Documento | Conteúdo |
-| --- | --- |
-| [`docs/fase1/README.md`](docs/fase1/README.md) | README original da Fase 1: stack, arquitetura DDD, bounded contexts, comandos úteis, troubleshooting |
-| [`docs/fase1/event_storming.md`](docs/fase1/event_storming.md) | Event Storming dos 4 bounded contexts (diagramas Mermaid) |
-| [`docs/fase1/demo.md`](docs/fase1/demo.md) | Walkthrough via `curl` do ciclo de vida completo de uma OS |
-| [`docs/fase1/security.md`](docs/fase1/security.md) | Scanners de segurança (SAST/DAST), como rodar e remediar achados |
-| [`docs/fase1/fase2-plano.md`](docs/fase1/fase2-plano.md) | Plano de execução da Fase 2 — gaps identificados e ordem de implementação |
+| Documento                                                      | Conteúdo                                                                                             |
+| -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| [`docs/fase1/README.md`](docs/fase1/README.md)                 | README original da Fase 1: stack, arquitetura DDD, bounded contexts, comandos úteis, troubleshooting |
+| [`docs/fase1/event_storming.md`](docs/fase1/event_storming.md) | Event Storming dos 4 bounded contexts (diagramas Mermaid)                                            |
+| [`docs/fase1/demo.md`](docs/fase1/demo.md)                     | Walkthrough via `curl` do ciclo de vida completo de uma OS                                           |
+| [`docs/fase1/security.md`](docs/fase1/security.md)             | Scanners de segurança (SAST/DAST), como rodar e remediar achados                                     |
+| [`docs/fase1/fase2-plano.md`](docs/fase1/fase2-plano.md)       | Plano de execução da Fase 2 — gaps identificados e ordem de implementação                            |
