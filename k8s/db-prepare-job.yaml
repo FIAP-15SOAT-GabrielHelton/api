@@ -1,0 +1,54 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: oficina-mecanica-db-prepare
+  namespace: default
+spec:
+  template:
+    metadata:
+      name: oficina-mecanica-db-prepare
+    spec:
+      containers:
+        - name: db-prepare
+          image: IMAGE_PLACEHOLDER
+          command: ["bin/rails", "db:prepare"]
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          env:
+            - name: RAILS_ENV
+              valueFrom:
+                configMapKeyRef:
+                  name: oficina-mecanica-config
+                  key: RAILS_ENV
+            - name: DATABASE_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: oficina-mecanica-config
+                  key: DATABASE_HOST
+            - name: DATABASE_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: oficina-mecanica-config
+                  key: DATABASE_PORT
+            - name: DATABASE_USERNAME
+              valueFrom:
+                configMapKeyRef:
+                  name: oficina-mecanica-config
+                  key: DATABASE_USERNAME
+            - name: OFICINA_MECANICA_DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: oficina-mecanica-secrets
+                  key: OFICINA_MECANICA_DATABASE_PASSWORD
+            - name: SECRET_KEY_BASE
+              valueFrom:
+                secretKeyRef:
+                  name: oficina-mecanica-secrets
+                  key: SECRET_KEY_BASE
+      restartPolicy: OnFailure
+  backoffLimit: 3

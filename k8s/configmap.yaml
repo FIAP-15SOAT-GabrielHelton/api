@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: oficina-mecanica-config
+  namespace: default
+data:
+  RAILS_ENV: "production"
+  DATABASE_HOST: "DATABASE_HOST_PLACEHOLDER"
+  DATABASE_PORT: "5432"
+  DATABASE_USERNAME: "postgres"

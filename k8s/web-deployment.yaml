@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oficina-mecanica-web
+  namespace: default
+  labels:
+    app: oficina-mecanica-web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: oficina-mecanica-web
+  template:
+    metadata:
+      labels:
+        app: oficina-mecanica-web
+    spec:
+      containers:
+        - name: web
+          image: IMAGE_PLACEHOLDER
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          env:
+            - name: RAILS_ENV
+              valueFrom:
+                configMapKeyRef:
+                  name: oficina-mecanica-config
+                  key: RAILS_ENV
+            - name: DATABASE_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: oficina-mecanica-config
+                  key: DATABASE_HOST
+            - name: DATABASE_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: oficina-mecanica-config
+                  key: DATABASE_PORT
+            - name: DATABASE_USERNAME
+              valueFrom:
+                configMapKeyRef:
+                  name: oficina-mecanica-config
+                  key: DATABASE_USERNAME
+            - name: OFICINA_MECANICA_DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: oficina-mecanica-secrets
+                  key: OFICINA_MECANICA_DATABASE_PASSWORD
+            - name: SECRET_KEY_BASE
+              valueFrom:
+                secretKeyRef:
+                  name: oficina-mecanica-secrets
+                  key: SECRET_KEY_BASE
+            - name: APP_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: oficina-mecanica-config
+                  key: APP_HOST
+                  optional: true
+            - name: SENDGRID_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: oficina-mecanica-secrets
+                  key: SENDGRID_API_KEY
+                  optional: true
+          readinessProbe:
+            httpGet:
+              path: /up
+              port: 80
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /up
+              port: 80
+            initialDelaySeconds: 20
+            periodSeconds: 20
+            timeoutSeconds: 5
