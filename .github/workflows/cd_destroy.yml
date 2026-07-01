@@ -1,0 +1,52 @@
+name: CD Destroy (EKS Cleanup)
+
+# Disparo manual para destruição imediata do ambiente.
+# Usar o mesmo concurrency group que o cd_deploy.yml cancela o sleep de
+# autodestruição em andamento, evitando duas destruições simultâneas.
+on:
+  workflow_dispatch:
+    inputs:
+      aws_access_key_id:
+        description: 'AWS Access Key ID (AWS Academy)'
+        required: true
+        type: string
+      aws_secret_access_key:
+        description: 'AWS Secret Access Key (AWS Academy)'
+        required: true
+        type: string
+      aws_session_token:
+        description: 'AWS Session Token (AWS Academy)'
+        required: true
+        type: string
+
+# cancel-in-progress: true cancela o job auto-destroy do cd_deploy.yml ao acionar este workflow.
+concurrency:
+  group: oficina-mecanica-eks
+  cancel-in-progress: true
+
+jobs:
+  destroy:
+    name: Clean K8s & Destroy Infrastructure
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # Mascara credenciais AWS nos logs. DB_PASSWORD vem de secrets do repositório
+      # e é mascarado automaticamente pelo GitHub, mas explicitamos para garantia.
+      - name: Mask Sensitive Credentials
+        run: |
+          echo "::add-mask::${{ inputs.aws_access_key_id }}"
+          echo "::add-mask::${{ inputs.aws_secret_access_key }}"
+          echo "::add-mask::${{ inputs.aws_session_token }}"
+          echo "::add-mask::${{ secrets.DB_PASSWORD }}"
+
+      # Toda a lógica de destroy está centralizada na composite action.
+      # Mascaramento, credenciais AWS, Terraform e kubectl são gerenciados por ela.
+      - name: Destroy Infrastructure
+        uses: ./.github/actions/infra-destroy
+        with:
+          aws_access_key_id: ${{ inputs.aws_access_key_id }}
+          aws_secret_access_key: ${{ inputs.aws_secret_access_key }}
+          aws_session_token: ${{ inputs.aws_session_token }}
+          db_password: ${{ secrets.DB_PASSWORD }}
