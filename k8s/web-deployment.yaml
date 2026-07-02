@@ -71,6 +71,15 @@ spec:
                   name: oficina-mecanica-secrets
                   key: SENDGRID_API_KEY
                   optional: true
+            # Shared secret external systems send in X-Webhook-Token to call the
+            # public quote approval/rejection webhook. Optional so the pod still
+            # boots without it, but the webhook returns 401 until it is set.
+            - name: QUOTE_WEBHOOK_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: oficina-mecanica-secrets
+                  key: QUOTE_WEBHOOK_TOKEN
+                  optional: true
           readinessProbe:
             httpGet:
               path: /up
