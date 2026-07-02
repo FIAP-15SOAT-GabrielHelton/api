@@ -894,6 +894,118 @@
         }
       }
     },
+    "/api/v1/webhooks/quotes/{id}/approve": {
+      "patch": {
+        "summary": "Approve quote via external webhook (status → approved, decrements stock)",
+        "tags": [
+          "Quotes Webhooks"
+        ],
+        "security": [
+          {
+            "webhookToken": []
+          }
+        ],
+        "description": "Machine-to-machine webhook for an external system to report the customer's approval. Authenticated by a static shared secret in the X-Webhook-Token header (no user JWT).",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "quote approved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quote"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "missing or invalid webhook token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "unprocessable entity (unknown quote, wrong state, or insufficient stock)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/webhooks/quotes/{id}/reject": {
+      "patch": {
+        "summary": "Reject quote via external webhook (status → rejected)",
+        "tags": [
+          "Quotes Webhooks"
+        ],
+        "security": [
+          {
+            "webhookToken": []
+          }
+        ],
+        "description": "Machine-to-machine webhook for an external system to report the customer's rejection. Authenticated by a static shared secret in the X-Webhook-Token header (no user JWT).",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "quote rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quote"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "missing or invalid webhook token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "unprocessable entity (unknown quote or wrong state)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/quotes/{id}": {
       "get": {
         "summary": "Get quote by ID",
@@ -2139,6 +2251,54 @@
         }
       }
     },
+    "/api/v1/work_orders/{id}/reject": {
+      "patch": {
+        "summary": "Reject work order (status → rejected) — valid from received or diagnosing",
+        "tags": [
+          "Work Orders"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "work order rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrder"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "unprocessable entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          }
+        }
+      }
+    },
     "/api/v1/work_orders/{id}/execute": {
       "patch": {
         "summary": "Start execution (status → in_progress)",
@@ -2710,6 +2870,11 @@
       "bearerAuth": {
         "type": "http",
         "scheme": "bearer"
+      },
+      "webhookToken": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Webhook-Token"
       }
     }
   },

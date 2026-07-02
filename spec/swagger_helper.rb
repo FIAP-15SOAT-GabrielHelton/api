@@ -142,6 +142,11 @@ RSpec.configure do |config|
           bearerAuth: {
             type: :http,
             scheme: :bearer
+          },
+          webhookToken: {
+            type: :apiKey,
+            in: :header,
+            name: "X-Webhook-Token"
           }
         }
       },
