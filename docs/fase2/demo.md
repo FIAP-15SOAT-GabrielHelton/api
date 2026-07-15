@@ -102,7 +102,7 @@ curl -X PATCH http://localhost:3000/api/v1/webhooks/quotes/<QUOTE_ID>/approve \
   -H "X-Webhook-Token: <WEBHOOK_TOKEN>"
 ```
 
-Por trás, o webhook delega para o mesmo use case `Quotes::ApproveQuote` usado pelo endpoint de staff: o orçamento vira `approved`, a OS transiciona `awaiting_approval → approved`, o estoque é decrementado e a notificação de status é disparada — nenhuma regra de negócio é duplicada no adapter.
+Por trás, o webhook delega para o mesmo use case `Quotes::ApproveQuote` usado pelo endpoint de staff: o orçamento vira `approved`, a OS transiciona `awaiting_approval → approved` e o estoque é decrementado — nenhuma regra de negócio é duplicada no adapter.
 
 ## 7. Recusar orçamento via webhook externo
 
