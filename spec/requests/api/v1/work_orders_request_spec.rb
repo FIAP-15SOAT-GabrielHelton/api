@@ -66,17 +66,10 @@ RSpec.describe "Api::V1::WorkOrders", type: :request do
       service_id = create_service
       item_id = create_inventory_item
 
-      post "/api/v1/work_orders",
-           params: {
-             customer_id: customer_id,
-             vehicle_id: vehicle_id,
-             problem_description: "Engine noise",
-             line_items: [
-               { item_type: "service", reference_id: service_id, quantity: 1 },
-               { item_type: "part", reference_id: item_id, quantity: 2 }
-             ]
-           },
-           headers: auth_headers, as: :json
+      create_work_order_with_line_items(customer_id, vehicle_id, [
+        { item_type: "service", reference_id: service_id, quantity: 1 },
+        { item_type: "part", reference_id: item_id, quantity: 2 }
+      ])
 
       expect(response).to have_http_status(:created)
       body = response.parsed_body
@@ -159,6 +152,15 @@ RSpec.describe "Api::V1::WorkOrders", type: :request do
          params: { customer_id: customer_id, vehicle_id: vehicle_id, problem_description: "x" },
          headers: auth_headers, as: :json
     response.parsed_body["id"]
+  end
+
+  def create_work_order_with_line_items(customer_id, vehicle_id, line_items)
+    post "/api/v1/work_orders",
+         params: {
+           customer_id: customer_id, vehicle_id: vehicle_id,
+           problem_description: "Engine noise", line_items: line_items
+         },
+         headers: auth_headers, as: :json
   end
 
   describe "POST /api/v1/work_orders/:id/line_items" do
