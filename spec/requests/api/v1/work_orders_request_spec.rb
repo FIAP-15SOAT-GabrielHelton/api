@@ -60,6 +60,24 @@ RSpec.describe "Api::V1::WorkOrders", type: :request do
       expect(body["line_items"]).to eq([])
     end
 
+    it "creates a work order already with line_items, starting in diagnosing" do
+      customer_id = create_customer
+      vehicle_id = create_vehicle(customer_id)
+      service_id = create_service
+      item_id = create_inventory_item
+
+      create_work_order_with_line_items(customer_id, vehicle_id, [
+        { item_type: "service", reference_id: service_id, quantity: 1 },
+        { item_type: "part", reference_id: item_id, quantity: 2 }
+      ])
+
+      expect(response).to have_http_status(:created)
+      body = response.parsed_body
+      expect(body["status"]).to eq("diagnosing")
+      expect(body["line_items"].size).to eq(2)
+      expect(body["line_items"].map { |li| li["item_type"] }).to contain_exactly("service", "part")
+    end
+
     it "returns 422 when customer does not exist" do
       customer_id = create_customer
       vehicle_id = create_vehicle(customer_id)
@@ -134,6 +152,15 @@ RSpec.describe "Api::V1::WorkOrders", type: :request do
          params: { customer_id: customer_id, vehicle_id: vehicle_id, problem_description: "x" },
          headers: auth_headers, as: :json
     response.parsed_body["id"]
+  end
+
+  def create_work_order_with_line_items(customer_id, vehicle_id, line_items)
+    post "/api/v1/work_orders",
+         params: {
+           customer_id: customer_id, vehicle_id: vehicle_id,
+           problem_description: "Engine noise", line_items: line_items
+         },
+         headers: auth_headers, as: :json
   end
 
   describe "POST /api/v1/work_orders/:id/line_items" do

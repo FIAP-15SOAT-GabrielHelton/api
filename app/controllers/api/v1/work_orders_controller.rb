@@ -243,10 +243,9 @@ module Api
       end
 
       def create_params
-        permitted = params.permit(:customer_id, :vehicle_id, :problem_description,
-                                  line_items: [ :item_type, :reference_id, :quantity ])
-        permitted[:line_items] = (permitted[:line_items] || []).map(&:to_h).map(&:symbolize_keys)
-        permitted.to_h.symbolize_keys
+        params.permit(:customer_id, :vehicle_id, :problem_description,
+                      line_items: [ :item_type, :reference_id, :quantity ])
+              .to_h.deep_symbolize_keys
       end
 
       def list_params
