@@ -219,7 +219,7 @@ No pipeline de CI/CD, esses passos são automáticos — incluindo a limpeza de 
 
 ## Vídeo demonstrativo
 
-_(link do vídeo a adicionar aqui)_
+_[Youtube](https://www.youtube.com/watch?v=uv2nZvj7HSk)_
 
 Roteiro coberto (≤ 15 min): deploy da aplicação, execução do CI/CD, consumo das APIs e escalabilidade automática (HPA sob carga).
 
