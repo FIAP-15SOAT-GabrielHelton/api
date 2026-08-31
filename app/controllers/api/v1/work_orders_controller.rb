@@ -3,6 +3,8 @@
 module Api
   module V1
     class WorkOrdersController < Api::V1::ApplicationController
+      before_action :require_staff!, only: %i[ready_to_execute assign diagnose reject execute complete deliver add_line_item start_line_item finish_line_item]
+
       def index
         result = list_work_orders.call(**list_params)
 
@@ -21,6 +23,8 @@ module Api
         result = find_work_order_details.call(id: params[:id])
 
         if result.success?
+          return render_forbidden if customer? && result.value[:work_order].customer_id != current_customer.id
+
           render json: WorkOrders::Presenters::Details.call(result.value)
         else
           render json: { error: result.error }, status: :not_found
@@ -243,14 +247,18 @@ module Api
       end
 
       def create_params
-        params.permit(:customer_id, :vehicle_id, :problem_description,
-                      line_items: [ :item_type, :reference_id, :quantity ])
-              .to_h.deep_symbolize_keys
+        p = params.permit(:customer_id, :vehicle_id, :problem_description,
+                          line_items: [ :item_type, :reference_id, :quantity ])
+                  .to_h.deep_symbolize_keys
+        p[:customer_id] = current_customer.id if customer?
+        p
       end
 
       def list_params
-        params.permit(:status, :customer_id, :mechanic_id, :start_date, :end_date, :page, :per_page)
-              .to_h.symbolize_keys
+        p = params.permit(:status, :customer_id, :mechanic_id, :start_date, :end_date, :page, :per_page)
+                  .to_h.symbolize_keys
+        p[:customer_id] = current_customer.id if customer?
+        p
       end
     end
   end

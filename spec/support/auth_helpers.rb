@@ -55,4 +55,39 @@ module AuthHelpers
       role: :mechanic
     ).value
   end
+
+  def customer_auth_headers(customer: default_test_customer)
+    { "Authorization" => "Bearer #{access_token_for_customer(customer)}" }
+  end
+
+  def access_token_for_customer(customer)
+    encoder = ::Auth::JwtEncoder.new
+    ::Registrations::IssueCustomerToken.new(token_encoder: encoder).call(customer: customer).value
+  end
+
+  def default_test_customer
+    @default_test_customer ||= find_or_create_default_test_customer
+  end
+
+  def find_or_create_default_test_customer
+    repository = ::Persistence::Registrations::ActiveRecordCustomerRepository.new
+    existing = repository.find_by_document("12345678909")
+    return existing if existing
+
+    ::Registrations::RegisterCustomer.new(customer_repository: repository).call(
+      name: "Spec Customer",
+      email: "spec-customer@example.com",
+      phone: "11988887777",
+      document: "12345678909",
+      person_type: :individual,
+      address: {
+        zip_code: "01001-000",
+        street: "Praça da Sé",
+        number: "100",
+        complement: "Apto 1",
+        city: "São Paulo",
+        state: "SP"
+      }
+    ).value
+  end
 end

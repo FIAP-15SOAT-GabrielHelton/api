@@ -3,6 +3,8 @@
 module Api
   module V1
     class InventoryItemsController < Api::V1::ApplicationController
+      before_action :require_staff!
+
       def index
         result = list_inventory_items.call
 

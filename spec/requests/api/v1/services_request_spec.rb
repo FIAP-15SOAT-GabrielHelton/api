@@ -13,6 +13,12 @@ RSpec.describe "Api::V1::Services", type: :request do
   end
 
   describe "POST /api/v1/services" do
+    it "returns 403 forbidden when accessed by a customer" do
+      post "/api/v1/services", params: valid_params, headers: customer_auth_headers, as: :json
+
+      expect(response).to have_http_status(:forbidden)
+    end
+
     it "creates a service with valid data" do
       post "/api/v1/services", params: valid_params, headers: auth_headers, as: :json
 

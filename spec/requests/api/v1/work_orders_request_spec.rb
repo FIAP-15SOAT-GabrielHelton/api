@@ -232,6 +232,16 @@ RSpec.describe "Api::V1::WorkOrders", type: :request do
   end
 
   describe "PATCH /api/v1/work_orders/:id/diagnose" do
+    it "returns 403 forbidden when accessed by a customer" do
+      customer_id = create_customer
+      vehicle_id = create_vehicle(customer_id)
+      wo_id = create_work_order(customer_id, vehicle_id)
+
+      patch "/api/v1/work_orders/#{wo_id}/diagnose", headers: customer_auth_headers, as: :json
+
+      expect(response).to have_http_status(:forbidden)
+    end
+
     it "moves to awaiting_approval after items are added" do
       customer_id = create_customer
       vehicle_id = create_vehicle(customer_id)

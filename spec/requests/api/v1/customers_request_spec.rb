@@ -85,7 +85,13 @@ RSpec.describe "Api::V1::Customers", type: :request do
       expect(response.parsed_body.size).to eq(2)
     end
 
-    it "returns empty array when no customers" do
+    it "returns 403 forbidden when accessed by a customer" do
+      get "/api/v1/customers", headers: customer_auth_headers, as: :json
+
+      expect(response).to have_http_status(:forbidden)
+    end
+
+    it "returns empty array when there are no customers" do
       get "/api/v1/customers", headers: auth_headers, as: :json
 
       expect(response).to have_http_status(:ok)
@@ -94,7 +100,24 @@ RSpec.describe "Api::V1::Customers", type: :request do
   end
 
   describe "GET /api/v1/customers/:id" do
-    it "returns the customer" do
+    it "allows a customer to view their own profile" do
+      customer = default_test_customer
+      get "/api/v1/customers/#{customer.id}", headers: customer_auth_headers(customer: customer), as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body["id"]).to eq(customer.id)
+    end
+
+    it "returns 403 forbidden when a customer tries to view another customer" do
+      post "/api/v1/customers", params: valid_params, headers: auth_headers, as: :json
+      other_customer_id = response.parsed_body["id"]
+
+      get "/api/v1/customers/#{other_customer_id}", headers: customer_auth_headers, as: :json
+
+      expect(response).to have_http_status(:forbidden)
+    end
+
+    it "returns the customer when accessed by staff" do
       post "/api/v1/customers", params: valid_params, headers: auth_headers, as: :json
       customer_id = response.parsed_body["id"]
 
