@@ -30,12 +30,14 @@ RSpec.describe Registrations::IssueCustomerToken do
     token = use_case.call(customer: customer).value
     payload = encoder.decode(token)
 
-    expect(payload["sub"]).to eq(42)
-    expect(payload["cpf"]).to eq("12345678909")
-    expect(payload["name"]).to eq("Maria Silva")
-    expect(payload["email"]).to eq("maria@example.com")
-    expect(payload["role"]).to eq("customer")
-    expect(payload["type"]).to eq("customer_access")
+    expect(payload).to include(
+      "sub" => 42,
+      "cpf" => "12345678909",
+      "name" => "Maria Silva",
+      "email" => "maria@example.com",
+      "role" => "customer",
+      "type" => "customer_access"
+    )
     expect(payload["exp"]).to be > Time.now.to_i
   end
 end
