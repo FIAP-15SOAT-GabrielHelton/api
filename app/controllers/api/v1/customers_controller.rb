@@ -3,7 +3,7 @@
 module Api
   module V1
     class CustomersController < Api::V1::ApplicationController
-      before_action :require_staff!, only: %i[index destroy]
+      before_action :require_staff!, only: %i[index create destroy]
 
       def index
         result = list_customers.call
@@ -12,7 +12,7 @@ module Api
       end
 
       def show
-        return render_forbidden if customer? && params[:id].to_i != current_customer.id
+        return render_forbidden if forbidden_for_customer?(params[:id].to_i)
 
         result = find_customer.call(id: params[:id])
 
@@ -41,7 +41,7 @@ module Api
       end
 
       def update
-        return render_forbidden if customer? && params[:id].to_i != current_customer.id
+        return render_forbidden if forbidden_for_customer?(params[:id].to_i)
 
         result = update_customer.call(
           id: params[:id],

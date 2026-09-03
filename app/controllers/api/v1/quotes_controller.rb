@@ -10,7 +10,7 @@ module Api
         return render(json: { error: quote_res.error }, status: :not_found) if quote_res.failure?
 
         quote = quote_res.value
-        return render_forbidden if customer? && !quote_owner?(quote)
+        return render_forbidden if forbidden_for_customer?(quote_owner_id(quote))
 
         render json: Quotes::Presenters::Quote.call(quote)
       end
@@ -30,9 +30,9 @@ module Api
         return render(json: { error: quote_res.error }, status: :not_found) if quote_res.failure?
 
         quote = quote_res.value
-        return render_forbidden if customer? && !quote_owner?(quote)
+        return render_forbidden if forbidden_for_customer?(quote_owner_id(quote))
 
-        result = approve_quote.call(id: params[:id])
+        result = approve_quote.call(id: params[:id], quote: quote)
 
         if result.success?
           render json: Quotes::Presenters::Quote.call(result.value)
@@ -46,9 +46,9 @@ module Api
         return render(json: { error: quote_res.error }, status: :not_found) if quote_res.failure?
 
         quote = quote_res.value
-        return render_forbidden if customer? && !quote_owner?(quote)
+        return render_forbidden if forbidden_for_customer?(quote_owner_id(quote))
 
-        result = reject_quote.call(id: params[:id])
+        result = reject_quote.call(id: params[:id], quote: quote)
 
         if result.success?
           render json: Quotes::Presenters::Quote.call(result.value)
@@ -112,9 +112,8 @@ module Api
         )
       end
 
-      def quote_owner?(quote)
-        wo = work_order_repository.find(quote.work_order_id)
-        wo && wo.customer_id == current_customer.id
+      def quote_owner_id(quote)
+        work_order_repository.find(quote.work_order_id)&.customer_id
       end
     end
   end

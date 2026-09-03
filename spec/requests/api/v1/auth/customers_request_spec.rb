@@ -42,6 +42,14 @@ RSpec.describe "Api::V1::Auth::Customers", type: :request do
       expect(body["access_token"]).to be_a(String)
     end
 
+    it "falls back to document when cpf is sent as an empty string" do
+      post "/api/v1/auth/customer", params: { cpf: "", document: cpf }, as: :json
+
+      expect(response).to have_http_status(:ok)
+      body = response.parsed_body
+      expect(body["access_token"]).to be_a(String)
+    end
+
     it "returns 401 with invalid CPF format" do
       post "/api/v1/auth/customer", params: { cpf: "111.111.111-11" }, as: :json
 

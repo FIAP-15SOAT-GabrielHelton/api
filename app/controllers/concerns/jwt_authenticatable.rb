@@ -57,6 +57,16 @@ module JwtAuthenticatable
     render_forbidden unless customer?
   end
 
+  def require_receptionist!
+    render_forbidden unless staff? && (@current_user.receptionist? || @current_user.admin?)
+  end
+
+  # Verdadeiro quando a requisição é de um customer tentando acessar um
+  # recurso que não é seu (owner_id é o customer_id do recurso).
+  def forbidden_for_customer?(owner_id)
+    customer? && owner_id != current_customer.id
+  end
+
   def render_forbidden
     render json: { error: "Forbidden" }, status: :forbidden
   end

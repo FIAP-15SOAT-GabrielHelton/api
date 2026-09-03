@@ -18,7 +18,7 @@ module Api
         result = find_vehicle(params[:id])
 
         if result.success?
-          return render_forbidden if customer? && result.value.customer_id != current_customer.id
+          return render_forbidden if forbidden_for_customer?(result.value.customer_id)
 
           render json: Registrations::Presenters::Vehicle.call(result.value)
         else
@@ -46,10 +46,11 @@ module Api
 
       def update
         vehicle_res = find_vehicle(params[:id])
-        return render_forbidden if customer? && vehicle_res.success? && vehicle_res.value.customer_id != current_customer.id
+        return render_forbidden if vehicle_res.success? && forbidden_for_customer?(vehicle_res.value.customer_id)
 
         result = update_vehicle.call(
           id: params[:id],
+          vehicle: vehicle_res.success? ? vehicle_res.value : nil,
           **update_params
         )
 
@@ -62,9 +63,10 @@ module Api
 
       def destroy
         vehicle_res = find_vehicle(params[:id])
-        return render_forbidden if customer? && vehicle_res.success? && vehicle_res.value.customer_id != current_customer.id
+        return render json: { error: vehicle_res.error }, status: :not_found if vehicle_res.failure?
+        return render_forbidden if forbidden_for_customer?(vehicle_res.value.customer_id)
 
-        result = deactivate_vehicle.call(id: params[:id])
+        result = deactivate_vehicle.call(id: params[:id], vehicle: vehicle_res.value)
 
         if result.success?
           render json: Registrations::Presenters::Vehicle.call(result.value)

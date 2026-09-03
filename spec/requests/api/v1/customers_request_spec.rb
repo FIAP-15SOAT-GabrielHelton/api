@@ -67,6 +67,12 @@ RSpec.describe "Api::V1::Customers", type: :request do
       expect(body["person_type"]).to eq("company")
       expect(body["document"]).to eq("11.222.333/0001-81")
     end
+
+    it "returns 403 forbidden when accessed by a customer" do
+      post "/api/v1/customers", params: valid_params, headers: customer_auth_headers, as: :json
+
+      expect(response).to have_http_status(:forbidden)
+    end
   end
 
   describe "GET /api/v1/customers" do

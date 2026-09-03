@@ -18,7 +18,10 @@ module WorkOrders
 
     def perform(customer_id:, vehicle_id:, problem_description:, line_items: [])
       return Shared::Result.failure("Customer not found") unless @customer_repository.find(customer_id)
-      return Shared::Result.failure("Vehicle not found") unless @vehicle_repository.find(vehicle_id)
+
+      vehicle = @vehicle_repository.find(vehicle_id)
+      return Shared::Result.failure("Vehicle not found") unless vehicle
+      return Shared::Result.failure("Vehicle does not belong to customer") unless vehicle.customer_id == customer_id
 
       has_items = line_items.any?
       work_order = WorkOrder.new(

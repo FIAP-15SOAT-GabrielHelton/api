@@ -19,9 +19,11 @@ RSpec.describe "Api::V1::Quotes", type: :request do
     { name: "Oil Change", description: "Full oil change", base_price: 5000, estimated_duration_minutes: 30 }
   end
 
-  def setup_quote
-    post "/api/v1/customers", params: customer_params, headers: auth_headers, as: :json
-    customer_id = response.parsed_body["id"]
+  def setup_quote(customer_id: nil)
+    unless customer_id
+      post "/api/v1/customers", params: customer_params, headers: auth_headers, as: :json
+      customer_id = response.parsed_body["id"]
+    end
     post "/api/v1/vehicles", params: vehicle_params.merge(customer_id: customer_id), headers: auth_headers, as: :json
     vehicle_id = response.parsed_body["id"]
     post "/api/v1/services", params: service_params, headers: auth_headers, as: :json
@@ -58,6 +60,24 @@ RSpec.describe "Api::V1::Quotes", type: :request do
 
       expect(response).to have_http_status(:not_found)
     end
+
+    it "allows the owning customer to view their quote" do
+      wo_id = setup_quote(customer_id: default_test_customer.id)
+      quote_id = Persistence::Quotes::QuoteRecord.find_by(work_order_id: wo_id).id
+
+      get "/api/v1/quotes/#{quote_id}", headers: customer_auth_headers, as: :json
+
+      expect(response).to have_http_status(:ok)
+    end
+
+    it "returns 403 forbidden when a different customer tries to view the quote" do
+      wo_id = setup_quote
+      quote_id = Persistence::Quotes::QuoteRecord.find_by(work_order_id: wo_id).id
+
+      get "/api/v1/quotes/#{quote_id}", headers: customer_auth_headers, as: :json
+
+      expect(response).to have_http_status(:forbidden)
+    end
   end
 
   describe "PATCH /api/v1/quotes/:id/send_to_customer" do
@@ -91,9 +111,11 @@ RSpec.describe "Api::V1::Quotes", type: :request do
   describe "PATCH /api/v1/quotes/:id/approve" do
     let(:inventory_params) { { name: "Brake Pad", code: "BP-01", unit_price: 2000, quantity: 5 } }
 
-    def setup_quote_with_part
-      post "/api/v1/customers", params: customer_params, headers: auth_headers, as: :json
-      customer_id = response.parsed_body["id"]
+    def setup_quote_with_part(customer_id: nil)
+      unless customer_id
+        post "/api/v1/customers", params: customer_params, headers: auth_headers, as: :json
+        customer_id = response.parsed_body["id"]
+      end
       post "/api/v1/vehicles", params: vehicle_params.merge(customer_id: customer_id), headers: auth_headers, as: :json
       vehicle_id = response.parsed_body["id"]
       post "/api/v1/services", params: service_params, headers: auth_headers, as: :json
@@ -155,16 +177,35 @@ RSpec.describe "Api::V1::Quotes", type: :request do
 
       expect(response).to have_http_status(:unprocessable_content)
     end
+
+    it "allows the owning customer to approve their quote" do
+      ids = setup_quote_with_part(customer_id: default_test_customer.id)
+
+      patch "/api/v1/quotes/#{ids[:quote_id]}/approve", headers: customer_auth_headers, as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body["status"]).to eq("approved")
+    end
+
+    it "returns 403 forbidden when a different customer tries to approve the quote" do
+      ids = setup_quote_with_part
+
+      patch "/api/v1/quotes/#{ids[:quote_id]}/approve", headers: customer_auth_headers, as: :json
+
+      expect(response).to have_http_status(:forbidden)
+    end
   end
 
   describe "PATCH /api/v1/quotes/:id/reject" do
     let(:inventory_params) { { name: "Brake Pad", code: "BP-01", unit_price: 2000, quantity: 5 } }
 
-    def setup_sent_quote_with_part
+    def setup_sent_quote_with_part(customer_id: nil)
       post "/api/v1/inventory_items", params: inventory_params, headers: auth_headers, as: :json
       item_id = response.parsed_body["id"]
-      post "/api/v1/customers", params: customer_params, headers: auth_headers, as: :json
-      customer_id = response.parsed_body["id"]
+      unless customer_id
+        post "/api/v1/customers", params: customer_params, headers: auth_headers, as: :json
+        customer_id = response.parsed_body["id"]
+      end
       post "/api/v1/vehicles", params: vehicle_params.merge(customer_id: customer_id), headers: auth_headers, as: :json
       vehicle_id = response.parsed_body["id"]
       post "/api/v1/work_orders",
@@ -192,6 +233,23 @@ RSpec.describe "Api::V1::Quotes", type: :request do
 
       get "/api/v1/inventory_items/#{ids[:item_id]}", headers: auth_headers, as: :json
       expect(response.parsed_body["quantity"]).to eq(5)
+    end
+
+    it "allows the owning customer to reject their quote" do
+      ids = setup_sent_quote_with_part(customer_id: default_test_customer.id)
+
+      patch "/api/v1/quotes/#{ids[:quote_id]}/reject", headers: customer_auth_headers, as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body["status"]).to eq("rejected")
+    end
+
+    it "returns 403 forbidden when a different customer tries to reject the quote" do
+      ids = setup_sent_quote_with_part
+
+      patch "/api/v1/quotes/#{ids[:quote_id]}/reject", headers: customer_auth_headers, as: :json
+
+      expect(response).to have_http_status(:forbidden)
     end
   end
 end

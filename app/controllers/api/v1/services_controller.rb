@@ -3,7 +3,7 @@
 module Api
   module V1
     class ServicesController < Api::V1::ApplicationController
-      before_action :require_staff!, only: %i[create update destroy]
+      before_action :require_admin!, only: %i[create update destroy]
 
       def index
         result = list_services.call

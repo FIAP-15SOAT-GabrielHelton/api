@@ -11,8 +11,8 @@ module Registrations
 
     private
 
-    def perform(id:, **attrs)
-      vehicle = @repository.find(id)
+    def perform(id:, vehicle: nil, **attrs)
+      vehicle ||= @repository.find(id)
       return Shared::Result.failure("Vehicle not found") unless vehicle
 
       vehicle.update(**attrs)

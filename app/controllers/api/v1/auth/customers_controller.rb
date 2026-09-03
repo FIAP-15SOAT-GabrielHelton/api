@@ -7,7 +7,7 @@ module Api
         skip_before_action :authenticate!
 
         def create
-          auth_result = authenticate_customer.call(cpf: params[:cpf] || params[:document])
+          auth_result = authenticate_customer.call(cpf: params[:cpf].presence || params[:document])
           return render(json: { error: auth_result.error }, status: :unauthorized) if auth_result.failure?
 
           customer = auth_result.value
@@ -20,14 +20,6 @@ module Api
         end
 
         private
-
-        def customer_repository
-          @customer_repository ||= ::Persistence::Registrations::ActiveRecordCustomerRepository.new
-        end
-
-        def token_encoder
-          @token_encoder ||= ::Auth::JwtEncoder.new
-        end
 
         def authenticate_customer
           ::Registrations::AuthenticateCustomer.new(customer_repository: customer_repository)

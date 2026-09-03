@@ -114,6 +114,25 @@ RSpec.describe "Api::V1::Vehicles", type: :request do
 
       expect(response).to have_http_status(:not_found)
     end
+
+    it "allows a customer to view their own vehicle" do
+      customer = default_test_customer
+      post "/api/v1/vehicles", params: valid_params.merge(customer_id: customer.id), headers: auth_headers, as: :json
+      vehicle_id = response.parsed_body["id"]
+
+      get "/api/v1/vehicles/#{vehicle_id}", headers: customer_auth_headers(customer: customer), as: :json
+
+      expect(response).to have_http_status(:ok)
+    end
+
+    it "returns 403 forbidden when a customer tries to view another customer's vehicle" do
+      post "/api/v1/vehicles", params: valid_params, headers: auth_headers, as: :json
+      other_vehicle_id = response.parsed_body["id"]
+
+      get "/api/v1/vehicles/#{other_vehicle_id}", headers: customer_auth_headers, as: :json
+
+      expect(response).to have_http_status(:forbidden)
+    end
   end
 
   describe "PATCH /api/v1/vehicles/:id" do
@@ -131,6 +150,57 @@ RSpec.describe "Api::V1::Vehicles", type: :request do
       patch "/api/v1/vehicles/999999", params: { color: "Black" }, headers: auth_headers, as: :json
 
       expect(response).to have_http_status(:unprocessable_content)
+    end
+
+    it "allows a customer to update their own vehicle" do
+      customer = default_test_customer
+      post "/api/v1/vehicles", params: valid_params.merge(customer_id: customer.id), headers: auth_headers, as: :json
+      vehicle_id = response.parsed_body["id"]
+
+      patch "/api/v1/vehicles/#{vehicle_id}", params: { color: "Black" }, headers: customer_auth_headers(customer: customer), as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body["color"]).to eq("Black")
+    end
+
+    it "returns 403 forbidden when a customer tries to update another customer's vehicle" do
+      post "/api/v1/vehicles", params: valid_params, headers: auth_headers, as: :json
+      other_vehicle_id = response.parsed_body["id"]
+
+      patch "/api/v1/vehicles/#{other_vehicle_id}", params: { color: "Black" }, headers: customer_auth_headers, as: :json
+
+      expect(response).to have_http_status(:forbidden)
+    end
+  end
+
+  describe "DELETE /api/v1/vehicles/:id" do
+    it "deactivates the vehicle when accessed by staff" do
+      post "/api/v1/vehicles", params: valid_params, headers: auth_headers, as: :json
+      vehicle_id = response.parsed_body["id"]
+
+      delete "/api/v1/vehicles/#{vehicle_id}", headers: auth_headers, as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body["status"]).to eq("inactive")
+    end
+
+    it "allows a customer to deactivate their own vehicle" do
+      customer = default_test_customer
+      post "/api/v1/vehicles", params: valid_params.merge(customer_id: customer.id), headers: auth_headers, as: :json
+      vehicle_id = response.parsed_body["id"]
+
+      delete "/api/v1/vehicles/#{vehicle_id}", headers: customer_auth_headers(customer: customer), as: :json
+
+      expect(response).to have_http_status(:ok)
+    end
+
+    it "returns 403 forbidden when a customer tries to deactivate another customer's vehicle" do
+      post "/api/v1/vehicles", params: valid_params, headers: auth_headers, as: :json
+      other_vehicle_id = response.parsed_body["id"]
+
+      delete "/api/v1/vehicles/#{other_vehicle_id}", headers: customer_auth_headers, as: :json
+
+      expect(response).to have_http_status(:forbidden)
     end
   end
 end

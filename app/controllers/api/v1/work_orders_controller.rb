@@ -3,7 +3,9 @@
 module Api
   module V1
     class WorkOrdersController < Api::V1::ApplicationController
-      before_action :require_staff!, only: %i[ready_to_execute assign diagnose reject execute complete deliver add_line_item start_line_item finish_line_item]
+      before_action :require_staff!, only: %i[ready_to_execute reject add_line_item start_line_item finish_line_item]
+      before_action :require_receptionist!, only: %i[assign deliver]
+      before_action :require_mechanic!, only: %i[diagnose execute complete]
 
       def index
         result = list_work_orders.call(**list_params)
@@ -23,7 +25,7 @@ module Api
         result = find_work_order_details.call(id: params[:id])
 
         if result.success?
-          return render_forbidden if customer? && result.value[:work_order].customer_id != current_customer.id
+          return render_forbidden if forbidden_for_customer?(result.value[:work_order].customer_id)
 
           render json: WorkOrders::Presenters::Details.call(result.value)
         else

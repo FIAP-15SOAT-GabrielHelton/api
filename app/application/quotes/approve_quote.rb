@@ -13,8 +13,8 @@ module Quotes
 
     private
 
-    def perform(id:)
-      quote = @repository.find(id)
+    def perform(id:, quote: nil)
+      quote ||= @repository.find(id)
       return Shared::Result.failure("Quote not found") unless quote
 
       ActiveRecord::Base.transaction do
