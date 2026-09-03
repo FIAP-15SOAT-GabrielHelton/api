@@ -1,4 +1,4 @@
-name: CD Destroy (EKS Cleanup)
+name: CD Destroy (App Cleanup & ECR)
 
 # Disparo manual para destruição imediata do ambiente.
 # Usar o mesmo concurrency group que o cd_deploy.yml cancela o sleep de
@@ -21,7 +21,7 @@ on:
 
 # cancel-in-progress: true cancela o job auto-destroy do cd_deploy.yml ao acionar este workflow.
 concurrency:
-  group: oficina-mecanica-eks
+  group: oficina-mecanica-api
   cancel-in-progress: true
 
 jobs:
@@ -32,14 +32,12 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v5
 
-      # Mascara credenciais AWS nos logs. DB_PASSWORD vem de secrets do repositório
-      # e é mascarado automaticamente pelo GitHub, mas explicitamos para garantia.
+      # Mascara credenciais AWS nos logs.
       - name: Mask Sensitive Credentials
         run: |
           echo "::add-mask::${{ inputs.aws_access_key_id }}"
           echo "::add-mask::${{ inputs.aws_secret_access_key }}"
           echo "::add-mask::${{ inputs.aws_session_token }}"
-          echo "::add-mask::${{ secrets.DB_PASSWORD }}"
 
       # Toda a lógica de destroy está centralizada na composite action.
       # Mascaramento, credenciais AWS, Terraform e kubectl são gerenciados por ela.
@@ -49,4 +47,3 @@ jobs:
           aws_access_key_id: ${{ inputs.aws_access_key_id }}
           aws_secret_access_key: ${{ inputs.aws_secret_access_key }}
           aws_session_token: ${{ inputs.aws_session_token }}
-          db_password: ${{ secrets.DB_PASSWORD }}
