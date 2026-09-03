@@ -7,7 +7,7 @@
 | **Autor(es)** | FIAP 15SOAT - Grupo 183 |
 | **Data** | 31 de Agosto de 2026 |
 | **Contexto** | Tech Challenge - Fase 3 |
-| **Repositórios** | `api` (Rails Core), `k8s-infra` (Terraform EKS/VPC), `db-infra` (Terraform RDS), `auth-serverless` (AWS Lambda / Gateway) e `deploy-orchestrator` (CI/CD cross-repo) |
+| **Repositórios** | `api` (Rails Core), `k8s-infra` (Terraform EKS/VPC), `db-infra` (Terraform RDS), `auth-serverless` (porta de entrada: API Gateway + Lambdas) e `deploy-orchestrator` (CI/CD cross-repo) |
 | **Status (atualização)** | A separação em 4 repositórios exigida pelo desafio (Lambda, Infra K8s, Infra DB, App principal) motivou o desmembramento do antigo `infra/` monolítico do `api` em `k8s-infra` e `db-infra`. O `deploy-orchestrator` é um 5º repositório auxiliar (fora da contagem dos 4 exigidos) que dispara e aguarda o deploy dos demais em sequência. Ver §7.3 e §8.3. |
 
 ---
@@ -65,6 +65,10 @@ A solução estabelece a separação em dois repositórios independentes, utiliz
 * **Decisão:** A infraestrutura antes centralizada em `api/infra/` (VPC, EKS, RDS, ECR) foi dividida em: `k8s-infra` (VPC + EKS + node group + metrics-server), `db-infra` (RDS) e `api` (mantém apenas ECR). Um 5º repositório, `deploy-orchestrator`, dispara e aguarda o `workflow_dispatch` de cada um dos 4 repositórios do desafio, em sequência, recebendo as credenciais efêmeras da sessão AWS Academy uma única vez.
 * **Compartilhamento de configuração entre repositórios:** via **AWS SSM Parameter Store** — cada repositório publica os valores que expõe (`aws_ssm_parameter` no seu próprio Terraform) e os consumidores leem via `data "aws_ssm_parameter"` ou `aws ssm get-parameter`, evitando expor o `.tfstate` completo entre repositórios. Ver tabela de contrato em §7.3.
 * **Justificativa:** Atende ao requisito do desafio de 4 repositórios independentes, cada um com seu próprio CI/CD e deploy automático, mantendo a dependência de dados entre eles explícita e auditável.
+
+### ADR 7: Provisionamento do API Gateway no Repositório `auth-serverless` (não no `k8s-infra`)
+* **Decisão:** Apesar do API Gateway ser a porta de entrada de **todo** o sistema (Lambdas e API Rails), seu Terraform (`aws_apigatewayv2_api`, authorizer, rotas e integrações) fica no repositório `auth-serverless`, não no `k8s-infra`.
+* **Justificativa:** O API Gateway referencia os ARNs das duas Lambdas (`auth_customer`, `lambda_authorizer`) — que só existem no state do `auth-serverless` — e a URL pública do ELB do Rails (`rails_api_base_url`, publicada pelo `api` via SSM). Ou seja, ele só pode ser provisionado **depois** que `k8s-infra`, `db-infra` e `api` já existirem. Como `k8s-infra` é o **primeiro** repositório da cadeia de deploy (todos os outros dependem da sua VPC/EKS), colocar o API Gateway ali criaria uma dependência circular (precisaria rodar primeiro para os outros, e por último para apontar para eles). Além disso, na AWS, **API Gateway e Lambda formam um par indissociável** — é o Gateway que torna a Lambda invocável via HTTP — o que torna `auth-serverless` (a categoria "Function Serverless" do desafio) o lugar natural para esse par, incluindo o roteamento para a API Rails.
 
 ---
 
@@ -287,7 +291,7 @@ Para impedir que clientes executem ações administrativas ou operacionais da of
 
 ---
 
-### 7.2 Novo Repositório (`auth-serverless` - TypeScript / Node.js)
+### 7.2 Novo Repositório (`auth-serverless` - TypeScript / Node.js) — Porta de Entrada Serverless (API Gateway + Lambdas)
 
 #### Estrutura do Projeto
 ```
