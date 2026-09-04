@@ -282,6 +282,11 @@ Detalhes da estrutura de `spec/` e comandos por camada: [`docs/fase1/README.md`]
 | [`docs/fase2/README.md`](docs/fase2/README.md) | README original da Fase 2: Clean Code, infraestrutura Kubernetes/Terraform, HPA |
 | [`docs/fase2/demo.md`](docs/fase2/demo.md) | Walkthrough via `curl` dos endpoints refatorados/adicionados na Fase 2 |
 | [`docs/fase3/RFC-001`](docs/fase3/RFC-001-authentication-authorization-serverless.md) | Autenticação via CPF, RBAC, arquitetura serverless e separação em 5 repositórios (ADRs 1-7) |
+| [`docs/fase3/RFC-002`](docs/fase3/RFC-002-escolha-da-nuvem.md) | Escolha do provedor de nuvem (AWS/AWS Academy) e suas implicações arquiteturais |
+| [`docs/fase3/RFC-003`](docs/fase3/RFC-003-escolha-do-banco-e-modelo.md) | Escolha do banco de dados (PostgreSQL), diagrama ER completo e explicação dos relacionamentos |
+| [`docs/fase3/architecture/component-diagram.md`](docs/fase3/architecture/component-diagram.md) | Diagrama de componentes completo: nuvem, APIs, banco e monitoramento (atravessa os 5 repositórios) |
+| [`docs/fase3/architecture/sequence-diagrams.md`](docs/fase3/architecture/sequence-diagrams.md) | Diagramas de sequência: autenticação por CPF, rota protegida (RBAC) e abertura de Ordem de Serviço |
+| [`docs/fase3/architecture/adr-log.md`](docs/fase3/architecture/adr-log.md) | ADRs 8-10: padrão de comunicação (REST síncrono), uso de HPA, Clean Architecture/DDD |
 
 ## Repositórios do projeto (Fase 3)
 

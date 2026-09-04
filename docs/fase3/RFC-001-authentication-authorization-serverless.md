@@ -458,3 +458,12 @@ A arquitetura descrita nesta RFC oferece um desacoplamento limpo entre o serviç
 1. Validação e aprovação final da RFC.
 2. Criação dos casos de uso de autenticação de cliente e proteções RBAC na API Rails (`api`).
 3. Setup e disponibilização dos arquivos do repositório `auth-serverless`.
+
+## 12. Documentação Relacionada
+
+Os ADRs desta RFC (1-7) são escopados a autenticação/serverless/multi-repo. Outras decisões técnicas e arquiteturais do projeto foram documentadas separadamente:
+
+- [RFC-002](RFC-002-escolha-da-nuvem.md) — escolha do provedor de nuvem (AWS/AWS Academy).
+- [RFC-003](RFC-003-escolha-do-banco-e-modelo.md) — escolha do banco de dados, diagrama ER e explicação dos relacionamentos.
+- [Log de ADRs (8-10)](architecture/adr-log.md) — decisões permanentes de outras áreas (padrão de comunicação, uso de HPA, Clean Architecture/DDD).
+- [Diagrama de Componentes](architecture/component-diagram.md) e [Diagramas de Sequência](architecture/sequence-diagrams.md) — visão viva da arquitetura, atualizada conforme o sistema evolui (diferente deste documento, que é um registro histórico da decisão da Fase 3).
