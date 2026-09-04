@@ -10,6 +10,21 @@ RSpec.describe "Api::V1::Admin::Metrics", type: :request do
       expect(response).to have_http_status(:unauthorized)
     end
 
+    it "returns 403 forbidden when accessed by a customer" do
+      get "/api/v1/admin/metrics", headers: customer_auth_headers, as: :json
+
+      expect(response).to have_http_status(:forbidden)
+      expect(response.parsed_body["error"]).to include("Forbidden")
+    end
+
+    it "returns 403 forbidden when accessed by a mechanic" do
+      mechanic = default_test_mechanic
+      get "/api/v1/admin/metrics", headers: auth_headers(user: mechanic), as: :json
+
+      expect(response).to have_http_status(:forbidden)
+      expect(response.parsed_body["error"]).to include("Forbidden")
+    end
+
     it "returns nil average and zero count when there are no finished services" do
       get "/api/v1/admin/metrics", headers: auth_headers, as: :json
 

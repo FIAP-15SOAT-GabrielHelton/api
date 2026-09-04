@@ -11,14 +11,68 @@ module JwtAuthenticatable
 
   def authenticate!
     payload = decode_bearer_token
-    return render_unauthorized unless payload && payload["type"] == "access"
+    return render_unauthorized unless payload
 
-    @current_user = user_repository.find(payload["sub"])
-    render_unauthorized unless @current_user&.active?
+    case payload["type"]
+    when "access"
+      @current_user = user_repository.find(payload["sub"])
+      render_unauthorized unless @current_user&.active?
+    when "customer_access"
+      @current_customer = customer_repository.find(payload["sub"])
+      render_unauthorized unless @current_customer&.active?
+    else
+      render_unauthorized
+    end
   end
 
   def current_user
     @current_user
+  end
+
+  def current_customer
+    @current_customer
+  end
+
+  def staff?
+    @current_user.present?
+  end
+
+  def customer?
+    @current_customer.present?
+  end
+
+  def require_staff!
+    render_forbidden unless staff?
+  end
+
+  def require_admin!
+    render_forbidden unless staff? && @current_user.admin?
+  end
+
+  def require_mechanic!
+    render_forbidden unless staff? && (@current_user.mechanic? || @current_user.admin?)
+  end
+
+  def require_customer!
+    render_forbidden unless customer?
+  end
+
+  def require_receptionist!
+    render_forbidden unless staff? && (@current_user.receptionist? || @current_user.admin?)
+  end
+
+  # Verdadeiro quando a requisição é de um customer tentando acessar um
+  # recurso que não é seu (owner_id é o customer_id do recurso).
+  def forbidden_for_customer?(owner_id)
+    customer? && owner_id != current_customer.id
+  end
+
+  def render_forbidden
+    render json: { error: "Forbidden" }, status: :forbidden
+  end
+
+  def render_unauthorized
+    render json: { error: "Unauthorized" }, status: :unauthorized
   end
 
   def decode_bearer_token
@@ -29,15 +83,15 @@ module JwtAuthenticatable
     token_encoder.decode(token)
   end
 
-  def render_unauthorized
-    render json: { error: "Unauthorized" }, status: :unauthorized
-  end
-
   def token_encoder
     @token_encoder ||= ::Auth::JwtEncoder.new
   end
 
   def user_repository
     @user_repository ||= ::Persistence::Accounts::ActiveRecordUserRepository.new
+  end
+
+  def customer_repository
+    @customer_repository ||= ::Persistence::Registrations::ActiveRecordCustomerRepository.new
   end
 end

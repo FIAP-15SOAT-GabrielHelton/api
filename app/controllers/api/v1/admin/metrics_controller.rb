@@ -4,6 +4,8 @@ module Api
   module V1
     module Admin
       class MetricsController < Api::V1::ApplicationController
+        before_action :require_admin!
+
         def show
           result = calculate_admin_metrics.call
 

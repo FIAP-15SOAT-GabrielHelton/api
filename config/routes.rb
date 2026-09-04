@@ -9,6 +9,7 @@ Rails.application.routes.draw do
     namespace :v1 do
       namespace :auth do
         post :login, to: "sessions#create"
+        post :customer, to: "customers#create"
         post :refresh, to: "tokens#refresh"
       end
 

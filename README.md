@@ -1,104 +1,131 @@
-# 15SOAT - Fase 2 - Tech Challenge - Grupo 183
+# 15SOAT - Fase 3 - Tech Challenge - Grupo 183
 
-Sistema de gestão de oficina mecânica: uma API Rails que cobre todo o ciclo de vida de uma Ordem de Serviço (OS), da abertura ao orçamento, aprovação e entrega do veículo. A Fase 1 (Tech Challenge de pós-graduação FIAP) entregou a aplicação em **Domain-Driven Design (DDD)**; a Fase 2 evolui tanto o **código** (Clean Code, Clean Architecture, novas APIs) quanto a **infraestrutura**: cluster **Kubernetes (AWS EKS)** provisionado via **Terraform**, banco gerenciado **RDS**, deploy automatizado por **CI/CD** e **escalabilidade automática (HPA)**.
+Sistema de gestão de oficina mecânica: uma API Rails que cobre todo o ciclo de vida de uma Ordem de Serviço (OS), da abertura ao orçamento, aprovação e entrega do veículo. A Fase 1 entregou a aplicação em **Domain-Driven Design (DDD)**; a Fase 2 evoluiu código e infraestrutura (Kubernetes, Terraform, HPA); a **Fase 3** adiciona **autenticação de clientes via CPF**, **autorização por papéis (RBAC)** e uma **arquitetura serverless** (AWS API Gateway + Lambda) como porta de entrada única — e separa o projeto em **5 repositórios independentes**, conforme exigido pelo desafio.
 
-> A documentação completa da Fase 1 (arquitetura DDD, bounded contexts, event storming, walkthrough da API e scanners de segurança) foi preservada em [`docs/fase1/`](docs/fase1/README.md).
+> A documentação das fases anteriores foi preservada: [Fase 1](docs/fase1/README.md) (arquitetura DDD, bounded contexts, event storming) e [Fase 2](docs/fase2/README.md) (Clean Code, Kubernetes/Terraform, HPA).
+
+## Tecnologias utilizadas
+
+| Categoria | Tecnologia |
+| :--- | :--- |
+| Linguagem / Framework | Ruby 3.4, Rails 8.1 (API-only) |
+| Banco de dados | PostgreSQL (RDS gerenciado, provisionado pelo repositório [`db-infra`](https://github.com/FIAP-15SOAT-GabrielHelton/db-infra)) |
+| Servidor de aplicação | Puma |
+| Jobs assíncronos | Solid Queue (roda sobre o próprio Postgres, sem Redis) |
+| Autenticação | JWT (`jwt`) — staff via e-mail/senha e clientes via CPF (bridge com o [`auth-serverless`](https://github.com/FIAP-15SOAT-GabrielHelton/auth-serverless)) |
+| Documentação da API | OpenAPI/Swagger (`rswag`) |
+| Testes | RSpec, FactoryBot, Faker, shoulda-matchers, SimpleCov (mínimo 80% linha/branch) |
+| Qualidade / Segurança | RuboCop, Brakeman, bundler-audit, Trivy, Semgrep, SonarQube, OWASP ZAP |
+| Deploy | Docker, Kubernetes (EKS, provisionado pelo [`k8s-infra`](https://github.com/FIAP-15SOAT-GabrielHelton/k8s-infra)), Terraform (ECR), Helm (metrics-server) |
+| CI/CD | GitHub Actions |
 
 ## Objetivos desta fase
 
-- Refatorar o código existente aplicando **Clean Code** e reforçando a **Clean Architecture** já iniciada na Fase 1, sem abrir mão das regras de negócio.
-- Ajustar e criar **APIs** conforme especificação: abertura de OS com serviços/peças, listagem ordenada com exclusão lógica, notificação de status por e-mail e rejeição de OS.
-- Provisionar a infraestrutura (VPC, cluster, banco, registry) de forma **reproduzível e descartável** via Terraform — essencial no AWS Academy, onde a conta é temporária.
-- Automatizar o ciclo completo de CI/CD via **GitHub Actions**: provisionar → buildar imagem → aplicar manifests → autodestruir por segurança.
-- Expor **autoscaling horizontal (HPA)** da aplicação conforme a carga de CPU/memória.
+- **Autenticação de clientes via CPF**: identificação sem senha, emitindo um JWT (`role: "customer"`) para acesso escopado aos próprios dados.
+- **RBAC (Role-Based Access Control)**: papéis `admin`, `receptionist`, `mechanic` (staff) e `customer`, com regras de acesso por rota/ação (matriz completa na RFC-001).
+- **Arquitetura serverless como porta de entrada única**: AWS API Gateway + AWS Lambda (função de autenticação + Lambda Authorizer), num repositório dedicado.
+- **Separação em 5 repositórios independentes**, cada um com CI/CD próprio: [`api`](https://github.com/FIAP-15SOAT-GabrielHelton/api) (este), [`k8s-infra`](https://github.com/FIAP-15SOAT-GabrielHelton/k8s-infra), [`db-infra`](https://github.com/FIAP-15SOAT-GabrielHelton/db-infra), [`auth-serverless`](https://github.com/FIAP-15SOAT-GabrielHelton/auth-serverless) e o auxiliar [`deploy-orchestrator`](https://github.com/FIAP-15SOAT-GabrielHelton/deploy-orchestrator).
+- Documentar as decisões técnicas como **RFC** (com ADRs embutidos) — ver [`docs/fase3/RFC-001`](docs/fase3/RFC-001-authentication-authorization-serverless.md).
 
-## Evolução da aplicação (Clean Code / Clean Architecture)
+## Autenticação e RBAC
 
-A Fase 1 já estabeleceu a separação em camadas (`domains → application → infrastructure`, `controllers/jobs` como interface — [detalhes aqui](docs/fase1/README.md#arquitetura)). Nesta fase o código foi refatorado para reforçar essa separação e novas APIs foram implementadas conforme a especificação.
-
-### Refatorações
-
-| Mudança                                                              | Motivação                                                                                                                                                                                                                                                                   |
-| -------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Camada de Presenters** (`app/application/<domínio>/presenters/`)   | Controllers formatavam JSON manualmente e acessavam value objects de domínio (`Money`, `Document`, `LicensePlate`) diretamente. A serialização de saída virou responsabilidade de uma camada própria, mantendo a regra de dependência `controllers → application → domains` |
-| **`WorkOrderNotifier` como orquestrador + `WorkOrderEmailNotifier`** | A notificação de mudança de status estava acoplada a e-mail. Virou um orquestrador _channel-agnostic_ que despacha para uma lista de notifiers — hoje só e-mail; adicionar SMS/push é um item novo na lista, sem tocar nos use cases                                        |
-
-### APIs alteradas/criadas
-
-| Requisito                                                                                            | Implementação                                                                                                                                                                                                                                                                                                                                                                                                            |
-| ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Abertura de OS recebendo cliente, veículo, serviços e peças                                          | `POST /api/v1/work_orders` passou a aceitar `line_items` já na criação, sem alterar o comportamento anterior (sem `line_items`, a OS continua abrindo como `received`)                                                                                                                                                                                                                                                   |
-| Listagem de OS ordenada por status, mais antigas primeiro, sem finalizadas/entregues                 | `ActiveRecordWorkOrderRepository#search`: ordena por prioridade operacional (`in_progress → awaiting_approval → diagnosing → received`) e oculta `completed`/`delivered` do resultado padrão (exclusão lógica, não física)                                                                                                                                                                                               |
-| Aprovação/recusa de orçamento (endpoint para notificação externa)                                    | `PATCH /api/v1/webhooks/quotes/:id/approve\|reject` (`Api::V1::Webhooks::QuotesController`), autenticado por segredo estático no header `X-Webhook-Token` — o endpoint público para notificação externa. `PATCH /api/v1/quotes/:id/approve\|reject` e `PATCH /api/v1/work_orders/:id/reject` (Fase 1, JWT de staff) seguem existindo para o fluxo interno, cobrindo as transições `received/diagnosing → rejected` da OS |
-| Atualização de status da OS por ator externo (e-mail como exemplo de integração) _(ver nota abaixo)_ | Mesmos webhooks do item anterior (`PATCH /api/v1/webhooks/quotes/:id/approve\|reject`): delegam para os mesmos use cases `Quotes::ApproveQuote`/`Quotes::RejectQuote` usados pelos endpoints de staff, preservando máquina de estados, baixa de estoque e notificação                                                                                                                                                    |
-
-> **Nota sobre a "atualização de status via e-mail":** validamos com o professor que o requisito pede apenas que um **ator externo** consiga disparar transição de status. Implementamos isso como `PATCH /api/v1/webhooks/quotes/:id/approve\|reject`, autenticados por um token estático (`X-Webhook-Token`) em vez do JWT de staff. Os webhooks são adapters de entrada que invocam os mesmos use cases (`Quotes::ApproveQuote`, `Quotes::RejectQuote`) — únicos autorizados a mutar o agregado `WorkOrder`/`Quote` e a validar a máquina de estados. Deliberadamente não criamos um endpoint que grave o status diretamente a partir de um evento externo, pulando esses use cases: isso duplicaria regra de negócio na borda — o que feriria o próprio DDD/Clean Architecture que este Tech Challenge pede para reforçar, já que a regra de transição de estado pertence ao agregado/use case, não ao adapter que a dispara.
-
-### Testes automatizados
-
-98 arquivos de spec (RSpec + FactoryBot + shoulda-matchers), com cobertura mínima de 80% linha/branch **verificada pelo SimpleCov na CI**. Cada mudança acima veio acompanhada de specs novos ou atualizados — unitários em `spec/application`/`spec/infrastructure`, de integração em `spec/requests`.
+- **Staff** (`admin`/`receptionist`/`mechanic`): `POST /api/v1/auth/login` (e-mail/senha) → JWT `type: "access"`.
+- **Cliente**: `POST /api/v1/auth/customer` (CPF) → JWT `type: "customer_access"`, `role: "customer"`. Em produção, essa rota é atendida pela Lambda `auth_customer` do [`auth-serverless`](https://github.com/FIAP-15SOAT-GabrielHelton/auth-serverless), que valida o formato do CPF e delega a este repositório (Single Source of Truth) a existência/status do cliente e a emissão do token.
+- **Autorização**: o concern `JwtAuthenticatable` (`app/controllers/concerns/jwt_authenticatable.rb`) expõe `require_staff!`, `require_admin!`, `require_mechanic!`, `require_receptionist!`, `require_customer!` e o helper `forbidden_for_customer?` para checagem de ownership (cliente só acessa seus próprios veículos, OSs, orçamentos e cadastro).
+- Matriz completa de permissões por rota: [RFC-001 §6](docs/fase3/RFC-001-authentication-authorization-serverless.md).
 
 ## Arquitetura
 
-### Componentes da aplicação
+### Componentes da aplicação (neste repositório)
 
 | Componente     | O que é                                                              | Onde roda                                                                |
 | -------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------ |
 | **web**        | API Rails (Puma), exposta via `/up`, `/api/v1/*`, `/api-docs`        | `Deployment` `oficina-mecanica-web` + `Service` LoadBalancer             |
 | **jobs**       | Worker do Solid Queue (e-mails via SendGrid, jobs assíncronos)       | `Deployment` `oficina-mecanica-jobs`                                     |
 | **db-prepare** | `bin/rails db:prepare` (migrations + seed) — roda uma vez por deploy | `Job` do Kubernetes, com `kubectl wait` bloqueando o deploy até concluir |
-| **PostgreSQL** | Banco único (app + Solid Queue), gerenciado                          | RDS (fora do cluster)                                                    |
-| **HPA**        | Escala o `web` por CPU (70%) e memória (80%), 1 a 3 réplicas         | `HorizontalPodAutoscaler` + `metrics-server`                             |
+| **HPA**        | Escala o `web` por CPU (70%) e memória (80%), 1 a 3 réplicas         | `HorizontalPodAutoscaler` + `metrics-server` (do `k8s-infra`)            |
 
-### Infraestrutura provisionada (Terraform, `infra/`)
+### Visão dos 5 repositórios
+
+```mermaid
+flowchart LR
+    Client["Cliente / Staff"]
+    APIGW["API Gateway + Lambdas\n(auth-serverless)\núnica porta de entrada"]
+
+    subgraph ThisRepo["api — este repositório"]
+        Web["Rails (web/jobs)"]
+        ECR[["ECR"]]
+    end
+
+    K8S["k8s-infra\nVPC + EKS"]
+    DB["db-infra\nRDS PostgreSQL"]
+    Orch["deploy-orchestrator\n(dispara os 4 repos em ordem)"]
+
+    Client --> APIGW
+    APIGW -- "HTTP_PROXY (rotas públicas + autorizadas)" --> Web
+    Web --- K8S
+    Web --> DB
+    Orch -.-> K8S
+    Orch -.-> DB
+    Orch -.-> ThisRepo
+    Orch -.-> APIGW
+
+    classDef repo fill:#9bb8ff,stroke:#5470c6,color:#000
+    classDef ext fill:#dddddd,stroke:#999999,color:#333,stroke-dasharray: 3 3
+    class Web,ECR repo
+    class APIGW,K8S,DB,Orch ext
+```
+
+Detalhes de cada repositório, o contrato de dados entre eles (AWS SSM Parameter Store) e a ordem de deploy: [RFC-001 §7.3](docs/fase3/RFC-001-authentication-authorization-serverless.md).
+
+### Infraestrutura deste repositório (Terraform, `infra/`) e sua relação com os demais
+
+> VPC, EKS e RDS deixaram de ser provisionados aqui — foram extraídos para os repositórios [`k8s-infra`](https://github.com/FIAP-15SOAT-GabrielHelton/k8s-infra) e [`db-infra`](https://github.com/FIAP-15SOAT-GabrielHelton/db-infra), atendendo ao requisito do desafio de repositórios independentes. Este repositório provisiona só o **ECR** e faz o **deploy da aplicação** num cluster já existente. A troca de informação entre os 5 repositórios (cluster, banco, URL pública) acontece via **AWS SSM Parameter Store** — nenhum deles lê o `.tfstate` de outro.
 
 ```mermaid
 flowchart TB
-    Internet((Internet))
-
-    subgraph VPC["VPC — 10.0.0.0/16"]
-        IGW["Internet Gateway"]
-
-        subgraph SubA["Subnet pública A · us-east-1a"]
-            NodeA["EKS Node Group\nt3.medium"]
-        end
-
-        subgraph SubB["Subnet pública B · us-east-1b"]
-            NodeB["EKS Node Group\nt3.medium"]
-        end
-
-        EKS[["EKS Control Plane\n(endpoint público)"]]
-        RDS[("RDS PostgreSQL\n(privado)")]
+    subgraph ThisRepo["api — este repositório"]
+        ECR[["ECR\nimagem Docker"]]
+        Web["Deployment web (Puma)"]
+        Jobs["Deployment jobs (Solid Queue)"]
+        DbPrepare["Job db-prepare\n(migrations + seed)"]
+        Svc["Service\nLoadBalancer"]
+        HPA["HPA\n1 a 3 réplicas"]
     end
 
-    ECR[["ECR\nimagem Docker"]]
-    MS["metrics-server\n(Helm)"]
-    S3[("S3\nTerraform state")]
+    subgraph Others["Provisionado por outros repositórios"]
+        EKS[["Cluster EKS\n(k8s-infra)"]]
+        RDS[("RDS PostgreSQL\n(db-infra)")]
+        APIGW["API Gateway\n(auth-serverless)"]
+    end
 
-    Internet --> IGW --> SubA
-    IGW --> SubB
-    NodeA --- EKS
-    NodeB --- EKS
-    EKS --> RDS
-    ECR -. pull da imagem .-> NodeA
-    ECR -. pull da imagem .-> NodeB
-    MS --- EKS
+    SSM[("AWS SSM\nParameter Store")]
 
-    classDef net fill:#9bb8ff,stroke:#5470c6,color:#000
+    SSM -. eks_cluster_name .-> Web
+    SSM -. rds_address .-> Web
+    ECR -- pull da imagem --> Web
+    ECR -- pull da imagem --> Jobs
+    Web & Jobs & DbPrepare --> RDS
+    Web --- EKS
+    HPA -. escala .-> Web
+    Web --> Svc
+    Svc -. publica rails_api_base_url .-> SSM
+    APIGW -- HTTP_PROXY --> Svc
+
+    classDef repo fill:#9bb8ff,stroke:#5470c6,color:#000
+    classDef ext fill:#dddddd,stroke:#999999,color:#333,stroke-dasharray: 3 3
     classDef db fill:#a8e6a2,stroke:#2d8a1f,color:#000
-    classDef ext fill:#ffd38c,stroke:#e58e00,color:#000
 
-    class IGW,NodeA,NodeB,EKS net
-    class RDS,S3 db
-    class ECR,MS,Internet ext
+    class ECR,Web,Jobs,DbPrepare,Svc,HPA repo
+    class EKS,APIGW ext
+    class RDS,SSM db
 ```
 
-- **VPC** própria (`infra/vpc.tf`) com 2 subnets públicas (multi-AZ), Internet Gateway e route table — simplificada de propósito (sem NAT Gateway) para reduzir custo/complexidade no AWS Academy.
-- **EKS** (`infra/eks.tf`, `infra/node_group.tf`): cluster gerenciado + node group de 1 a 3 instâncias `t3.medium`, usando o `LabRole` já disponível na conta AWS Academy (não é possível criar IAM roles próprias nesse ambiente).
-- **RDS** (`infra/rds.tf`): PostgreSQL, não exposto publicamente — só acessível a partir do cluster.
-- **ECR** (`infra/ecr.tf`): registry da imagem Docker da aplicação.
-- **metrics-server** (`infra/metrics_server.tf`): instalado via provider Helm — pré-requisito para o HPA conseguir ler métricas de CPU/memória dos pods.
-- **Backend do Terraform**: bucket S3 (`oficina-mecanica-tfstate-<account-id>`), criado via AWS CLI no início do pipeline para evitar o problema de "ovo e galinha" (o backend precisa existir antes do `terraform init`).
+- **ECR** (`infra/ecr.tf`): registry da imagem Docker da aplicação — único recurso de Terraform que sobrou neste repositório.
+- **Deploy no Kubernetes** (`k8s/`): `Deployment` web + jobs, `Job` de migrations/seed, `Service` LoadBalancer e `HPA` — aplicados via `kubectl` num cluster provisionado pelo `k8s-infra` (nome lido do SSM).
+- **RDS**: endpoint lido do SSM, publicado pelo `db-infra`.
+- **API Gateway**: mora no `auth-serverless` e acessa o `Service` deste repositório via `HTTP_PROXY` direto ao hostname público do ELB (publicado por este repositório no SSM).
+- Detalhes completos da separação e do contrato de dados: [RFC-001](docs/fase3/RFC-001-authentication-authorization-serverless.md) (ADR 5, 6 e 7).
 
 ### Fluxo de CI
 
@@ -128,28 +155,30 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    Trigger(["Disparo MANUAL (workflow_dispatch)\ncredenciais AWS Academy como input"]) --> Provision["Provisiona infraestrutura\nterraform apply: VPC + EKS + RDS + ECR + metrics-server"]
-    Provision --> Build["Build & push da imagem\nECR, tag = SHA do commit"]
+    Trigger(["Disparo MANUAL (workflow_dispatch)\ncredenciais AWS Academy como input"]) --> Provision["Provisiona o ECR\nterraform apply"]
+    Provision --> Read["Lê eks_cluster_name / rds_address\ndo SSM (k8s-infra / db-infra)"]
+    Read --> Build["Build & push da imagem\nECR, tag = SHA do commit"]
     Build --> Deploy["Deploy no Kubernetes\nmigrations (Job) + web/jobs/service/hpa"]
-    Deploy --> Destroy["Autodestruição de segurança\nsleep 2h → terraform destroy"]
+    Deploy --> Publish["Publica rails_api_base_url no SSM\n(para o auth-serverless)"]
+    Publish --> Destroy["Autodestruição de segurança\nsleep 2h → limpa workloads + ECR"]
 
     classDef manual fill:#ffd38c,stroke:#e58e00,color:#000
     classDef step fill:#9bb8ff,stroke:#5470c6,color:#000
     classDef danger fill:#ffcccc,stroke:#cc4444,color:#000
     class Trigger manual
-    class Provision,Build,Deploy step
+    class Provision,Read,Build,Deploy,Publish step
     class Destroy danger
 ```
 
-Ao contrário do CI (que roda automaticamente em `push`/`pull_request`), o deploy **nunca dispara sozinho**: é sempre acionado manualmente na aba **Actions → CD Deploy (EKS & K8s) → Run workflow**, informando as credenciais temporárias da sessão AWS Academy — mesma lógica do destroy manual imediato ([`cd_destroy.yml`](.github/workflows/cd_destroy.yml)). Detalhe de cada etapa (bootstrap do bucket S3, ConfigMap/Secrets, `kubectl wait` na migration): [`cd_deploy.yml`](.github/workflows/cd_deploy.yml) — ambos compartilham a lógica de destruição via a composite action [`infra-destroy`](.github/actions/infra-destroy/action.yml).
+Este repositório é o **3º na ordem de deploy do projeto**: `k8s-infra → db-infra → api (este repo) → auth-serverless` — ou dispare todos de uma vez via o [`deploy-orchestrator`](https://github.com/FIAP-15SOAT-GabrielHelton/deploy-orchestrator). O deploy **nunca dispara sozinho**: é sempre acionado manualmente na aba **Actions → CD Deploy (App on EKS) → Run workflow**, informando as credenciais temporárias da sessão AWS Academy — mesma lógica do destroy manual imediato ([`cd_destroy.yml`](.github/workflows/cd_destroy.yml)). Detalhe de cada etapa: [`cd_deploy.yml`](.github/workflows/cd_deploy.yml) — ambos compartilham a lógica de destruição via a composite action [`infra-destroy`](.github/actions/infra-destroy/action.yml).
 
 ## Execução local
 
-Sem alterações em relação à Fase 1 — apenas Docker é necessário:
+Apenas Docker é necessário:
 
 ```bash
-git clone git@github.com:<seu-usuario>/oficina_mecanica.git
-cd oficina_mecanica
+git clone git@github.com:FIAP-15SOAT-GabrielHelton/api.git
+cd api
 cp .env.example .env
 docker compose build
 docker compose run --rm web bin/rails db:prepare
@@ -158,9 +187,11 @@ docker compose up
 
 A API sobe em `http://localhost:3000` (Swagger em `/api-docs`). Detalhes de setup, credenciais de teste e troubleshooting: [`docs/fase1/README.md`](docs/fase1/README.md).
 
+Para testar o fluxo completo de autenticação por CPF + API Gateway localmente (Lambdas do `auth-serverless` contra esta API Rails), veja o [README do `auth-serverless`](https://github.com/FIAP-15SOAT-GabrielHelton/auth-serverless#desenvolvimento-local).
+
 ## Deploy em Kubernetes
 
-O deploy real acontece via GitHub Actions (aba **Actions → CD Deploy (EKS & K8s) → Run workflow**), informando as credenciais temporárias da sessão AWS Academy. Para rodar manualmente contra um cluster já provisionado:
+O deploy real acontece via GitHub Actions (aba **Actions → CD Deploy (App on EKS) → Run workflow**), informando as credenciais temporárias da sessão AWS Academy — **depois** que `k8s-infra` e `db-infra` já tiverem sido implantados. Para rodar manualmente contra um cluster já provisionado:
 
 ```bash
 aws eks update-kubeconfig --name oficina-mecanica-cluster --region us-east-1
@@ -174,7 +205,9 @@ kubectl apply -f k8s/web-deployment.yaml -f k8s/jobs-deployment.yaml -f k8s/serv
 kubectl get svc oficina-mecanica-web-service   # EXTERNAL-IP é a URL pública (http://, porta 80)
 ```
 
-> `k8s/configmap.yaml` e `k8s/secrets.yaml` contêm placeholders (`DATABASE_HOST_PLACEHOLDER`, `DATABASE_PASSWORD_PLACEHOLDER`, `SECRET_KEY_BASE_PLACEHOLDER`, `IMAGE_PLACEHOLDER`) — o workflow de CD os substitui automaticamente com `sed` a partir dos outputs do Terraform e dos GitHub Secrets. Para aplicar manualmente, substitua-os antes.
+> `k8s/configmap.yaml` e `k8s/secrets.yaml` contêm placeholders (`DATABASE_HOST_PLACEHOLDER`, `DATABASE_PASSWORD_PLACEHOLDER`, `SECRET_KEY_BASE_PLACEHOLDER`, `IMAGE_PLACEHOLDER`) — o workflow de CD os substitui automaticamente com `sed` a partir do SSM Parameter Store e dos GitHub Secrets. Para aplicar manualmente, substitua-os antes.
+
+Em produção, a URL pública real do sistema é a do **API Gateway** (repositório `auth-serverless`), não a do `Service` acima — o ELB deste repositório é um destino interno do `HTTP_PROXY` do Gateway.
 
 ### Testando o autoscaling (HPA)
 
@@ -188,6 +221,8 @@ O script sobe um `Deployment` auxiliar (`busybox`) batendo em `/up`, mostra `kub
 
 ## Provisionamento da infraestrutura (Terraform)
 
+Este repositório só provisiona o **ECR** — pré-requisito: os repositórios [`k8s-infra`](https://github.com/FIAP-15SOAT-GabrielHelton/k8s-infra) e [`db-infra`](https://github.com/FIAP-15SOAT-GabrielHelton/db-infra) precisam ter sido implantados antes (publicam `eks_cluster_name`/`rds_address` no SSM, lidos em tempo de deploy).
+
 ```bash
 cd infra/
 terraform init \
@@ -195,33 +230,32 @@ terraform init \
   -backend-config="key=oficina-mecanica/terraform.tfstate" \
   -backend-config="region=us-east-1"
 
-terraform plan  -var="db_password=<senha-do-rds>"
-terraform apply -var="db_password=<senha-do-rds>"
+terraform plan
+terraform apply
 
-terraform output   # rds_address, eks_cluster_name, ecr_repository_url
+terraform output ecr_repository_url
 ```
 
 Ao final do uso, destrua os recursos para não consumir os créditos do AWS Academy:
 
 ```bash
-terraform destroy -var="db_password=<senha-do-rds>"
+terraform destroy
 ```
 
-No pipeline de CI/CD, esses passos são automáticos — incluindo a limpeza de imagens do ECR e a espera pela liberação física dos Load Balancers antes do `destroy`, feita na composite action [`infra-destroy`](.github/actions/infra-destroy/action.yml).
+No pipeline de CI/CD, esses passos são automáticos — incluindo a limpeza de imagens do ECR e a espera pela liberação física do Load Balancer antes do `destroy`, feita na composite action [`infra-destroy`](.github/actions/infra-destroy/action.yml).
 
 ## Documentação da API
 
 - **Swagger UI** (ambiente local): [`http://localhost:3000/api-docs`](http://localhost:3000/api-docs)
-- **Swagger UI** (ambiente implantado): `http://<EXTERNAL-IP-do-Service>/api-docs`
+- **Swagger UI** (ambiente implantado): `http://<EXTERNAL-IP-do-Service>/api-docs` (ou, via o API Gateway em produção, `<url-do-api-gateway>/api-docs`)
 - Spec OpenAPI versionada: [`swagger/v1/swagger.json`](swagger/v1/swagger.json)
 - Walkthrough completo via `curl` cobrindo o ciclo de vida de uma OS: [`docs/fase1/demo.md`](docs/fase1/demo.md)
-- Walkthrough via `curl` só dos endpoints refatorados/adicionados na Fase 2 (webhooks, rejeição direta, listagem priorizada): [`docs/fase2/demo.md`](docs/fase2/demo.md)
+- Walkthrough via `curl` dos endpoints da Fase 2 (webhooks, rejeição direta, listagem priorizada): [`docs/fase2/demo.md`](docs/fase2/demo.md)
+- Autenticação de cliente por CPF e RBAC: exemplos de request/response na [RFC-001 §5](docs/fase3/RFC-001-authentication-authorization-serverless.md)
 
 ## Vídeo demonstrativo
 
-_[Youtube](https://www.youtube.com/watch?v=uv2nZvj7HSk)_
-
-Roteiro coberto (≤ 15 min): deploy da aplicação, execução do CI/CD, consumo das APIs e escalabilidade automática (HPA sob carga).
+_[Youtube](https://www.youtube.com/watch?v=uv2nZvj7HSk)_ — gravado na Fase 2 (deploy, CI/CD, consumo das APIs e HPA sob carga). Ainda não há um vídeo específico da Fase 3.
 
 ## Segurança
 
@@ -229,7 +263,7 @@ Mantido da Fase 1 sem alterações — bundler-audit, brakeman, Trivy, Semgrep, 
 
 ## Testes
 
-RSpec com FactoryBot, Faker e shoulda-matchers — sem alterações na estrutura da Fase 1:
+RSpec com FactoryBot, Faker e shoulda-matchers:
 
 ```bash
 docker compose exec web bundle exec rspec
@@ -239,10 +273,22 @@ Detalhes da estrutura de `spec/` e comandos por camada: [`docs/fase1/README.md`]
 
 ## Documentação adicional
 
-| Documento                                                      | Conteúdo                                                                                             |
-| -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| [`docs/fase1/README.md`](docs/fase1/README.md)                 | README original da Fase 1: stack, arquitetura DDD, bounded contexts, comandos úteis, troubleshooting |
-| [`docs/fase1/event_storming.md`](docs/fase1/event_storming.md) | Event Storming dos 4 bounded contexts (diagramas Mermaid)                                            |
-| [`docs/fase1/demo.md`](docs/fase1/demo.md)                     | Walkthrough via `curl` do ciclo de vida completo de uma OS                                           |
-| [`docs/fase1/security.md`](docs/fase1/security.md)             | Scanners de segurança (SAST/DAST), como rodar e remediar achados                                     |
-| [`docs/fase2/demo.md`](docs/fase2/demo.md)                     | Walkthrough via `curl` só dos endpoints refatorados/adicionados na Fase 2                            |
+| Documento | Conteúdo |
+| :--- | :--- |
+| [`docs/fase1/README.md`](docs/fase1/README.md) | README original da Fase 1: stack, arquitetura DDD, bounded contexts, comandos úteis, troubleshooting |
+| [`docs/fase1/event_storming.md`](docs/fase1/event_storming.md) | Event Storming dos 4 bounded contexts (diagramas Mermaid) |
+| [`docs/fase1/demo.md`](docs/fase1/demo.md) | Walkthrough via `curl` do ciclo de vida completo de uma OS |
+| [`docs/fase1/security.md`](docs/fase1/security.md) | Scanners de segurança (SAST/DAST), como rodar e remediar achados |
+| [`docs/fase2/README.md`](docs/fase2/README.md) | README original da Fase 2: Clean Code, infraestrutura Kubernetes/Terraform, HPA |
+| [`docs/fase2/demo.md`](docs/fase2/demo.md) | Walkthrough via `curl` dos endpoints refatorados/adicionados na Fase 2 |
+| [`docs/fase3/RFC-001`](docs/fase3/RFC-001-authentication-authorization-serverless.md) | Autenticação via CPF, RBAC, arquitetura serverless e separação em 5 repositórios (ADRs 1-7) |
+
+## Repositórios do projeto (Fase 3)
+
+| Repositório | Responsabilidade |
+| :--- | :--- |
+| `api` (este repositório) | Aplicação Rails, ECR e deploy no cluster |
+| [`k8s-infra`](https://github.com/FIAP-15SOAT-GabrielHelton/k8s-infra) | VPC + EKS + node group |
+| [`db-infra`](https://github.com/FIAP-15SOAT-GabrielHelton/db-infra) | RDS PostgreSQL |
+| [`auth-serverless`](https://github.com/FIAP-15SOAT-GabrielHelton/auth-serverless) | API Gateway (porta de entrada única) + Lambdas de autenticação/RBAC |
+| [`deploy-orchestrator`](https://github.com/FIAP-15SOAT-GabrielHelton/deploy-orchestrator) | Dispara e aguarda o deploy dos 4 repositórios acima, em ordem |

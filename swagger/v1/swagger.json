@@ -68,6 +68,68 @@
         }
       }
     },
+    "/api/v1/auth/customer": {
+      "post": {
+        "summary": "Customer Authentication via CPF",
+        "tags": [
+          "Authentication"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "customer authenticated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "access_token": {
+                      "type": "string"
+                    },
+                    "customer": {
+                      "$ref": "#/components/schemas/Customer"
+                    }
+                  },
+                  "required": [
+                    "access_token",
+                    "customer"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized (invalid CPF or inactive customer)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "cpf": {
+                    "type": "string",
+                    "example": "123.456.789-09"
+                  }
+                },
+                "required": [
+                  "cpf"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/auth/login": {
       "post": {
         "summary": "Login",

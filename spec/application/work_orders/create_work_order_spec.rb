@@ -19,7 +19,8 @@ describe WorkOrders::CreateWorkOrder do
 
   let(:vehicle_repository) do
     double("VehicleRepository").tap do |repo|
-      allow(repo).to receive(:find).with(20).and_return(double("Vehicle", id: 20))
+      allow(repo).to receive(:find).with(20).and_return(double("Vehicle", id: 20, customer_id: 10))
+      allow(repo).to receive(:find).with(30).and_return(double("Vehicle", id: 30, customer_id: 11))
       allow(repo).to receive(:find).with(999).and_return(nil)
     end
   end
@@ -84,6 +85,13 @@ describe WorkOrders::CreateWorkOrder do
 
         expect(result).to be_failure
         expect(result.error).to eq("Vehicle not found")
+      end
+
+      it "returns failure when vehicle belongs to a different customer" do
+        result = use_case.call(**valid_params.merge(vehicle_id: 30))
+
+        expect(result).to be_failure
+        expect(result.error).to eq("Vehicle does not belong to customer")
       end
     end
 

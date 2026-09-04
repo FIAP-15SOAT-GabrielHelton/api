@@ -7,7 +7,8 @@
 | **Autor(es)** | FIAP 15SOAT - Grupo 183 |
 | **Data** | 31 de Agosto de 2026 |
 | **Contexto** | Tech Challenge - Fase 3 |
-| **Repositórios** | `api` (Rails Core) e `auth-serverless` (AWS Lambda / Gateway) |
+| **Repositórios** | `api` (Rails Core), `k8s-infra` (Terraform EKS/VPC), `db-infra` (Terraform RDS), `auth-serverless` (porta de entrada: API Gateway + Lambdas) e `deploy-orchestrator` (CI/CD cross-repo) |
+| **Status (atualização)** | A separação em 4 repositórios exigida pelo desafio (Lambda, Infra K8s, Infra DB, App principal) motivou o desmembramento do antigo `infra/` monolítico do `api` em `k8s-infra` e `db-infra`. O `deploy-orchestrator` é um 5º repositório auxiliar (fora da contagem dos 4 exigidos) que dispara e aguarda o deploy dos demais em sequência. Ver §7.3 e §8.3. |
 
 ---
 
@@ -55,6 +56,19 @@ A solução estabelece a separação em dois repositórios independentes, utiliz
 
 ### ADR 4: Ambiente Local Desacoplado com Docker Compose
 * **Decisão:** O novo repositório `auth-serverless` conterá `Dockerfile` e `compose.yml`, executando um servidor local (Node.js/TypeScript) com hot-reload na porta `3001` conectado à API Rails (`http://host.docker.internal:3000`).
+
+### ADR 5: Integração API Gateway → API Rails via HTTP Proxy Público (sem VPC Link)
+* **Decisão:** O `Service` Kubernetes da API Rails (`oficina-mecanica-web-service`) é `type: LoadBalancer` (Classic ELB público). O API Gateway usa uma integração `HTTP_PROXY` apontando diretamente para o hostname público desse ELB, em vez de um `aws_apigatewayv2_vpc_link` privado.
+* **Justificativa:** Evita provisionar um Network Load Balancer interno, Security Groups adicionais e subnets privadas — reduzindo a superfície de permissões exigidas no AWS Academy (`LabRole`). O API Gateway continua sendo a **única porta de entrada pública**: o cliente final nunca chama o ELB diretamente, apenas o Lambda Authorizer e o proxy do API Gateway o fazem internamente.
+
+### ADR 6: Separação em Repositórios de Infraestrutura (`k8s-infra`, `db-infra`) e Orquestração de Deploy (`deploy-orchestrator`)
+* **Decisão:** A infraestrutura antes centralizada em `api/infra/` (VPC, EKS, RDS, ECR) foi dividida em: `k8s-infra` (VPC + EKS + node group + metrics-server), `db-infra` (RDS) e `api` (mantém apenas ECR). Um 5º repositório, `deploy-orchestrator`, dispara e aguarda o `workflow_dispatch` de cada um dos 4 repositórios do desafio, em sequência, recebendo as credenciais efêmeras da sessão AWS Academy uma única vez.
+* **Compartilhamento de configuração entre repositórios:** via **AWS SSM Parameter Store** — cada repositório publica os valores que expõe (`aws_ssm_parameter` no seu próprio Terraform) e os consumidores leem via `data "aws_ssm_parameter"` ou `aws ssm get-parameter`, evitando expor o `.tfstate` completo entre repositórios. Ver tabela de contrato em §7.3.
+* **Justificativa:** Atende ao requisito do desafio de 4 repositórios independentes, cada um com seu próprio CI/CD e deploy automático, mantendo a dependência de dados entre eles explícita e auditável.
+
+### ADR 7: Provisionamento do API Gateway no Repositório `auth-serverless` (não no `k8s-infra`)
+* **Decisão:** Apesar do API Gateway ser a porta de entrada de **todo** o sistema (Lambdas e API Rails), seu Terraform (`aws_apigatewayv2_api`, authorizer, rotas e integrações) fica no repositório `auth-serverless`, não no `k8s-infra`.
+* **Justificativa:** O API Gateway referencia os ARNs das duas Lambdas (`auth_customer`, `lambda_authorizer`) — que só existem no state do `auth-serverless` — e a URL pública do ELB do Rails (`rails_api_base_url`, publicada pelo `api` via SSM). Ou seja, ele só pode ser provisionado **depois** que `k8s-infra`, `db-infra` e `api` já existirem. Como `k8s-infra` é o **primeiro** repositório da cadeia de deploy (todos os outros dependem da sua VPC/EKS), colocar o API Gateway ali criaria uma dependência circular (precisaria rodar primeiro para os outros, e por último para apontar para eles). Além disso, na AWS, **API Gateway e Lambda formam um par indissociável** — é o Gateway que torna a Lambda invocável via HTTP — o que torna `auth-serverless` (a categoria "Function Serverless" do desafio) o lugar natural para esse par, incluindo o roteamento para a API Rails.
 
 ---
 
@@ -277,7 +291,7 @@ Para impedir que clientes executem ações administrativas ou operacionais da of
 
 ---
 
-### 7.2 Novo Repositório (`auth-serverless` - TypeScript / Node.js)
+### 7.2 Novo Repositório (`auth-serverless` - TypeScript / Node.js) — Porta de Entrada Serverless (API Gateway + Lambdas)
 
 #### Estrutura do Projeto
 ```
@@ -360,25 +374,46 @@ export const handler = async (event: any) => {
 
 ---
 
+### 7.3 Separação em Repositórios de Infraestrutura e Contrato de Dados (SSM)
+
+O desafio exige 4 repositórios independentes, cada um com CI/CD próprio e deploy automático: **Lambda** (`auth-serverless`), **Infra Kubernetes** (`k8s-infra`), **Infra do Banco Gerenciado** (`db-infra`) e **Aplicação principal** (`api`). Um 5º repositório auxiliar, `deploy-orchestrator`, orquestra o deploy dos 4 (ver §8.3).
+
+Ordem de deploy: `k8s-infra → db-infra → api → auth-serverless` (destroy na ordem inversa). Os valores são compartilhados via **AWS SSM Parameter Store**:
+
+| Parâmetro SSM | Publicado por | Consumido por |
+| :--- | :--- | :--- |
+| `/oficina-mecanica/vpc_id` | `k8s-infra` | `db-infra` |
+| `/oficina-mecanica/subnet_ids` | `k8s-infra` | `db-infra` |
+| `/oficina-mecanica/eks_cluster_name` | `k8s-infra` | `api` |
+| `/oficina-mecanica/rds_address` / `rds_endpoint` | `db-infra` | `api` |
+| `/oficina-mecanica/rails_api_base_url` | `api` (hostname do ELB, descoberto via `kubectl` pós-deploy) | `auth-serverless` |
+
+---
+
 ## 8. Infraestrutura como Código (Terraform) & Deploy
 
 ### 8.1 Recursos Provisionados
 1. **`aws_apigatewayv2_api`**: API Gateway HTTP API v2.
 2. **`aws_apigatewayv2_authorizer`**: Integrado à Lambda `lambda_authorizer`.
-3. **`aws_apigatewayv2_vpc_link`**: Conexão privada entre API Gateway e as subnets do cluster EKS.
+3. **`aws_apigatewayv2_integration` (HTTP_PROXY)**: Conexão direta ao hostname público do ELB da API Rails (lido de `/oficina-mecanica/rails_api_base_url` via SSM) — sem VPC Link/NLB (ver ADR 5, §3).
 4. **`aws_lambda_function`**:
    - `auth_customer`: Node.js 20.x, associada à role do AWS Academy (`LabRole`).
    - `lambda_authorizer`: Node.js 20.x, associada à `LabRole`.
 
 ### 8.2 Roteamento no API Gateway
 * **Rotas Públicas (Sem Authorizer)**:
-  * `POST /api/v1/auth/customer` -> Integração Lambda `auth_customer`
-  * `POST /api/v1/auth/login` -> Proxy direto EKS
-  * `GET /up` -> Proxy direto EKS
-  * `GET /api/v1/tracking/{protocol}` -> Proxy direto EKS
-  * `PATCH /api/v1/webhooks/{proxy+}` -> Proxy direto EKS
+  * `POST /api/v1/auth/customer` -> Integração Lambda `auth_customer` (`AWS_PROXY`)
+  * `POST /api/v1/auth/login` -> `HTTP_PROXY` direto ao ELB da API Rails
+  * `GET /up` -> `HTTP_PROXY` direto ao ELB da API Rails
+  * `GET /api/v1/tracking/{protocol}` -> `HTTP_PROXY` direto ao ELB da API Rails
+  * `PATCH /api/v1/webhooks/{proxy+}` -> `HTTP_PROXY` direto ao ELB da API Rails
 * **Rotas Protegidas (Com Lambda Authorizer)**:
-  * `ANY /api/v1/{proxy+}` -> Proxy EKS com Authorizer `jwt_authorizer`
+  * `ANY /api/v1/{proxy+}` -> `HTTP_PROXY` ao ELB da API Rails, com Authorizer `jwt_authorizer`
+
+Em todos os casos, o **API Gateway é a única porta de entrada pública**: o cliente nunca chama o ELB do EKS ou as Lambdas diretamente.
+
+### 8.3 Orquestração de Deploy (`deploy-orchestrator`)
+Workflow `workflow_dispatch` que recebe as credenciais da sessão AWS Academy **uma única vez** e dispara + aguarda (via GitHub CLI + PAT com escopo `repo`+`workflow` nos 4 repositórios) o `cd_deploy.yml` de cada repositório, em sequência: `k8s-infra → db-infra → api → auth-serverless`, interrompendo a cadeia caso algum passo falhe. Cada repositório mantém seu próprio `workflow_dispatch` independente, podendo também ser disparado isoladamente.
 
 ---
 
@@ -410,6 +445,8 @@ export const handler = async (event: any) => {
 | **Lambda conectando diretamente ao RDS Postgres** | Elimina uma chamada HTTP entre Lambda e API Rails. | Exige VPC Peering/RDS Proxy para a Lambda; duplica entidades e regras de banco fora do Rails API. | **Rejeitado:** Viola a separação de domínios DDD da API central. |
 | **Serverless Framework (Serverless.yml)** | Sintaxe simples para declarar Lambdas e API Gateway. | Criação de roles IAM customizadas falha no AWS Academy; dependência de plugins externos. | **Rejeitado:** Manter 100% Terraform garante uso da `LabRole` e alinhamento com a infra existente. |
 | **Monorepo** | Mantém todo o código no mesmo repositório git. | Não atende ao requisito explícito de segregação de repositórios do desafio. | **Rejeitado:** Segregação em repositório `auth-serverless` dedicado. |
+| **VPC Link privado (NLB interno) entre API Gateway e EKS** | Não expõe o ELB da aplicação publicamente; mais "correto" arquiteturalmente. | Exige provisionar NLB interno, Security Groups e subnets privadas extras — maior risco de bloqueio de permissões no AWS Academy (`LabRole`). | **Rejeitado:** Integração `HTTP_PROXY` direta ao ELB público existente (ADR 5), mantendo o API Gateway como única porta de entrada pública. |
+| **Terraform remote state entre os 4 repositórios de infra** | Reaproveita o bucket S3 de tfstate já existente; mais "Terraform-nativo". | Expõe o `.tfstate` completo (podendo conter dados sensíveis) entre repositórios. | **Rejeitado:** AWS SSM Parameter Store (ADR 6) — cada repo publica só os valores que quer expor. |
 
 ---
 

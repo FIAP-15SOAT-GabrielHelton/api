@@ -3,14 +3,16 @@
 module Api
   module V1
     class QuotesController < Api::V1::ApplicationController
-      def show
-        result = find_quote.call(id: params[:id])
+      before_action :require_staff!, only: %i[send_to_customer]
 
-        if result.success?
-          render json: Quotes::Presenters::Quote.call(result.value)
-        else
-          render json: { error: result.error }, status: :not_found
-        end
+      def show
+        quote_res = find_quote.call(id: params[:id])
+        return render(json: { error: quote_res.error }, status: :not_found) if quote_res.failure?
+
+        quote = quote_res.value
+        return render_forbidden if forbidden_for_customer?(quote_owner_id(quote))
+
+        render json: Quotes::Presenters::Quote.call(quote)
       end
 
       def send_to_customer
@@ -24,7 +26,13 @@ module Api
       end
 
       def approve
-        result = approve_quote.call(id: params[:id])
+        quote_res = find_quote.call(id: params[:id])
+        return render(json: { error: quote_res.error }, status: :not_found) if quote_res.failure?
+
+        quote = quote_res.value
+        return render_forbidden if forbidden_for_customer?(quote_owner_id(quote))
+
+        result = approve_quote.call(id: params[:id], quote: quote)
 
         if result.success?
           render json: Quotes::Presenters::Quote.call(result.value)
@@ -34,7 +42,13 @@ module Api
       end
 
       def reject
-        result = reject_quote.call(id: params[:id])
+        quote_res = find_quote.call(id: params[:id])
+        return render(json: { error: quote_res.error }, status: :not_found) if quote_res.failure?
+
+        quote = quote_res.value
+        return render_forbidden if forbidden_for_customer?(quote_owner_id(quote))
+
+        result = reject_quote.call(id: params[:id], quote: quote)
 
         if result.success?
           render json: Quotes::Presenters::Quote.call(result.value)
@@ -96,6 +110,10 @@ module Api
             Shared::WorkOrderEmailNotifier.new(customer_repository: customer_repository)
           ]
         )
+      end
+
+      def quote_owner_id(quote)
+        work_order_repository.find(quote.work_order_id)&.customer_id
       end
     end
   end

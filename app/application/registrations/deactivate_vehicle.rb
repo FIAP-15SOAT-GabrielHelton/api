@@ -11,8 +11,8 @@ module Registrations
 
     private
 
-    def perform(id:)
-      vehicle = @repository.find(id)
+    def perform(id:, vehicle: nil)
+      vehicle ||= @repository.find(id)
       return Shared::Result.failure("Vehicle not found") unless vehicle
 
       vehicle.deactivate

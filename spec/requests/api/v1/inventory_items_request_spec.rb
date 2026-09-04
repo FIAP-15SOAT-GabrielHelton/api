@@ -15,6 +15,12 @@ RSpec.describe "Api::V1::InventoryItems", type: :request do
   end
 
   describe "POST /api/v1/inventory_items" do
+    it "returns 403 forbidden when accessed by a customer" do
+      post "/api/v1/inventory_items", params: valid_params, headers: customer_auth_headers, as: :json
+
+      expect(response).to have_http_status(:forbidden)
+    end
+
     it "creates an item and returns 201 with identity fields" do
       post "/api/v1/inventory_items", params: valid_params, headers: auth_headers, as: :json
 
