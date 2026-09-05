@@ -4,7 +4,7 @@
 | :--- | :--- |
 | **Título** | Escolha do Banco de Dados (PostgreSQL) e Justificativa do Modelo Relacional |
 | **Status** | `ACEITO` |
-| **Autor(es)** | FIAP 15SOAT - Grupo 183 |
+| **Autor(es)** | FIAP 15SOAT - Grupo 161 |
 | **Data** | 04 de Setembro de 2026 |
 | **Contexto** | Tech Challenge - Fase 1 (decisão original) e Fase 3 (formalização + diagrama ER exigido) |
 | **Repositórios afetados** | `api`, `db-infra` |
@@ -140,7 +140,7 @@ erDiagram
 | :--- | :--- | :--- |
 | `customers` → `vehicles` | 1:N | Um cliente pode ter vários veículos cadastrados; cada veículo pertence a exatamente um cliente (`vehicles.customer_id`, FK obrigatória). |
 | `customers` → `work_orders` | 1:N | Um cliente pode abrir várias Ordens de Serviço ao longo do tempo; cada OS pertence a exatamente um cliente (`work_orders.customer_id`, FK obrigatória). Usado pelo helper `forbidden_for_customer?` para escopar o acesso de clientes só às próprias OSs. |
-| `vehicles` → `work_orders` | 1:N | Um veículo pode ter várias OSs (visitas) ao longo da vida útil; cada OS referencia exatamente um veículo (`work_orders.vehicle_id`). Desde a correção do code review, `CreateWorkOrder` valida que o veículo informado **pertence** ao `customer_id` da própria OS — evitando que uma OS vincule o veículo de outro cliente. |
+| `vehicles` → `work_orders` | 1:N | Um veículo pode ter várias OSs (visitas) ao longo da vida útil; cada OS referencia exatamente um veículo (`work_orders.vehicle_id`). `CreateWorkOrder` valida que o veículo informado **pertence** ao `customer_id` da própria OS — evitando que uma OS vincule o veículo de outro cliente. |
 | `users` → `work_orders` (mecânico) | 1:N, **opcional** | Uma OS pode não ter mecânico designado ainda (`mechanic_id` é `nullable`, preenchido só na ação `assign`); um usuário com papel `mechanic` pode estar designado a várias OSs. FK usa `on_delete: :nullify` — se o usuário for removido, a OS não é apagada, só perde a referência ao mecânico. |
 | `work_orders` → `line_items` | 1:N | Uma OS acumula os serviços/peças usados (itens de linha); cada item pertence a exatamente uma OS. |
 | `line_items` → `services` / `inventory_items` | **polimórfico, sem FK de banco** | `line_items.reference_id` aponta para `services.id` **ou** `inventory_items.id`, dependendo do discriminador `item_type` (`"service"`/`"part"`) — por isso não existe `add_foreign_key` real para essa coluna (uma FK de banco só pode apontar para uma tabela). A integridade é garantida na camada de aplicação (`WorkOrders::CreateWorkOrder#fetch_snapshot`). **Decisão de modelagem deliberada**: `name_snapshot` e `price_snapshot_cents` **congelam** o nome/preço do serviço ou peça no momento em que o item é adicionado à OS — se o catálogo de serviços ou o preço de uma peça mudar depois, OSs já abertas não são afetadas retroativamente. |

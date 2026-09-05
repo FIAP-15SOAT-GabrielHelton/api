@@ -1,4 +1,4 @@
-# 15SOAT - Fase 3 - Tech Challenge - Grupo 183
+# 15SOAT - Fase 3 - Tech Challenge - Grupo 161
 
 Sistema de gestão de oficina mecânica: uma API Rails que cobre todo o ciclo de vida de uma Ordem de Serviço (OS), da abertura ao orçamento, aprovação e entrega do veículo. A Fase 1 entregou a aplicação em **Domain-Driven Design (DDD)**; a Fase 2 evoluiu código e infraestrutura (Kubernetes, Terraform, HPA); a **Fase 3** adiciona **autenticação de clientes via CPF**, **autorização por papéis (RBAC)** e uma **arquitetura serverless** (AWS API Gateway + Lambda) como porta de entrada única — e separa o projeto em **5 repositórios independentes**, conforme exigido pelo desafio.
 

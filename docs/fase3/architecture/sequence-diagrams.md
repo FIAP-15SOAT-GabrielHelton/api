@@ -67,11 +67,11 @@ sequenceDiagram
     end
 ```
 
-> **Nota de produção (achado em 04/09/2026):** o Lambda Authorizer, por padrão, cacheia sua decisão por 300s indexada pelo token — e a `policyDocument` retornada tem o `Resource` (ARN) travado na rota da *primeira* chamada. Isso causava `403` incorreto em rotas diferentes com o mesmo token válido dentro da janela de cache. Corrigido fixando `authorizer_result_ttl_in_seconds = 0` (cache desabilitado) em `auth-serverless/infra/apigateway.tf`. Validado manualmente contra o ambiente real (ver [[fase3-multirepo-status]] na memória do projeto).
+> **Nota técnica:** o `lambda_authorizer` é configurado com `authorizer_result_ttl_in_seconds = 0` (cache de autorização desabilitado). O Lambda Authorizer só valida assinatura/expiração do JWT — uma operação de baixo custo computacional — então cachear o resultado não traz ganho de desempenho relevante, e evita inconsistências entre rotas diferentes acessadas com o mesmo token dentro de uma mesma janela de tempo.
 
 ## 3. Abertura de Ordem de Serviço
 
-Cobre `POST /api/v1/work_orders`, incluindo a validação de que o veículo informado pertence ao cliente (correção do code review) e os dois caminhos possíveis: **sem** itens de linha (status inicial `received`) e **com** itens de linha já na criação (status inicial `diagnosing`, conforme especificação da Fase 2).
+Cobre `POST /api/v1/work_orders`, incluindo a validação de que o veículo informado pertence ao cliente e os dois caminhos possíveis: **sem** itens de linha (status inicial `received`) e **com** itens de linha já na criação (status inicial `diagnosing`, conforme especificação da Fase 2).
 
 ```mermaid
 sequenceDiagram

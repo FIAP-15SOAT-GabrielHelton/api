@@ -4,7 +4,7 @@
 | :--- | :--- |
 | **Título** | Escolha do Provedor de Nuvem e suas Implicações Arquiteturais |
 | **Status** | `ACEITO` |
-| **Autor(es)** | FIAP 15SOAT - Grupo 183 |
+| **Autor(es)** | FIAP 15SOAT - Grupo 161 |
 | **Data** | 04 de Setembro de 2026 |
 | **Contexto** | Tech Challenge - Fases 2 e 3 (decisão tomada na Fase 2, documentada formalmente agora) |
 | **Repositórios afetados** | `k8s-infra`, `db-infra`, `api`, `auth-serverless`, `deploy-orchestrator` |
