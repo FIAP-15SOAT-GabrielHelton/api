@@ -80,7 +80,8 @@ module Api
         def notifier
           @notifier ||= Shared::WorkOrderNotifier.new(
             notifiers: [
-              Shared::WorkOrderEmailNotifier.new(customer_repository: customer_repository)
+              Shared::WorkOrderEmailNotifier.new(customer_repository: customer_repository),
+              Shared::WorkOrderMetricsNotifier.new
             ]
           )
         end

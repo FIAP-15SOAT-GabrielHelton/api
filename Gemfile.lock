@@ -156,6 +156,11 @@ GEM
       rexml
     lint_roller (1.1.0)
     logger (1.7.0)
+    lograge (0.15.0)
+      actionpack (>= 4)
+      activesupport (>= 4)
+      railties (>= 4)
+      request_store (~> 1.0)
     loofah (2.25.1)
       crass (~> 1.0.2)
       nokogiri (>= 1.12.0)
@@ -182,6 +187,8 @@ GEM
       timeout
     net-smtp (0.5.1)
       net-protocol
+    newrelic_rpm (10.7.1)
+      logger
     nio4r (2.7.5)
     nokogiri (1.19.3-aarch64-linux-gnu)
       racc (~> 1.4)
@@ -270,6 +277,8 @@ GEM
     regexp_parser (2.12.0)
     reline (0.6.3)
       io-console (~> 0.5)
+    request_store (1.7.0)
+      rack (>= 1.4)
     rexml (3.4.4)
     rspec-core (3.13.6)
       rspec-support (~> 3.13.0)
@@ -403,6 +412,8 @@ DEPENDENCIES
   image_processing (~> 1.2)
   jwt (~> 3.2)
   letter_opener_web
+  lograge
+  newrelic_rpm
   ostruct
   pg (~> 1.1)
   puma (>= 5.0)

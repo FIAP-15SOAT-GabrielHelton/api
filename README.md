@@ -257,6 +257,19 @@ No pipeline de CI/CD, esses passos são automáticos — incluindo a limpeza de 
 
 _[Youtube](https://www.youtube.com/watch?v=uv2nZvj7HSk)_ — gravado na Fase 2 (deploy, CI/CD, consumo das APIs e HPA sob carga). Ainda não há um vídeo específico da Fase 3.
 
+## Monitoramento e Observabilidade
+
+Ferramenta: **New Relic** (APM + Infrastructure + dashboard/alertas como código). Cobertura:
+
+- **APM na API Rails** (`newrelic_rpm`) — latência, throughput, erros e distributed tracing.
+- **Extensão Lambda** nas duas funções do [`auth-serverless`](https://github.com/FIAP-15SOAT-GabrielHelton/auth-serverless) (`auth_customer`, `lambda_authorizer`).
+- **New Relic Infrastructure** (`nri-kubernetes`, via Helm no [`k8s-infra`](https://github.com/FIAP-15SOAT-GabrielHelton/k8s-infra)) — CPU/memória do cluster EKS.
+- **Logs estruturados em JSON** correlacionados por `request_id`/`trace.id`, do API Gateway até o banco (ver [nota técnica no diagrama de sequência](docs/fase3/architecture/sequence-diagrams.md)).
+- **Eventos de negócio customizados** — duração da OS por etapa (diagnóstico, execução, finalização) e falhas de processamento de OS/orçamentos, usados no dashboard e nas condições de alerta.
+- **Dashboard e policy de alertas** (latência elevada, falhas no processamento de OS, indisponibilidade do healthcheck) provisionados via Terraform (provider `newrelic`) no [`k8s-infra`](https://github.com/FIAP-15SOAT-GabrielHelton/k8s-infra).
+
+Detalhes de arquitetura: [`docs/fase3/architecture/component-diagram.md`](docs/fase3/architecture/component-diagram.md#4-monitoramento). Justificativa da escolha da ferramenta: [ADR 11](docs/fase3/architecture/adr-log.md#adr-11-new-relic-como-ferramenta-de-observabilidade-e-monitoramento).
+
 ## Segurança
 
 Mantido da Fase 1 sem alterações — bundler-audit, brakeman, Trivy, Semgrep, SonarQube e OWASP ZAP. Detalhes, exemplos de output e workflow de remediação: [`docs/fase1/security.md`](docs/fase1/security.md).
@@ -286,7 +299,7 @@ Detalhes da estrutura de `spec/` e comandos por camada: [`docs/fase1/README.md`]
 | [`docs/fase3/RFC-003`](docs/fase3/RFC-003-escolha-do-banco-e-modelo.md) | Escolha do banco de dados (PostgreSQL), diagrama ER completo e explicação dos relacionamentos |
 | [`docs/fase3/architecture/component-diagram.md`](docs/fase3/architecture/component-diagram.md) | Diagrama de componentes completo: nuvem, APIs, banco e monitoramento (atravessa os 5 repositórios) |
 | [`docs/fase3/architecture/sequence-diagrams.md`](docs/fase3/architecture/sequence-diagrams.md) | Diagramas de sequência: autenticação por CPF, rota protegida (RBAC) e abertura de Ordem de Serviço |
-| [`docs/fase3/architecture/adr-log.md`](docs/fase3/architecture/adr-log.md) | ADRs 8-10: padrão de comunicação (REST síncrono), uso de HPA, Clean Architecture/DDD |
+| [`docs/fase3/architecture/adr-log.md`](docs/fase3/architecture/adr-log.md) | ADRs 8-11: padrão de comunicação (REST síncrono), uso de HPA, Clean Architecture/DDD, escolha do New Relic |
 
 ## Repositórios do projeto (Fase 3)
 

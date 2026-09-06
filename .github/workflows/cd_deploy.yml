@@ -130,12 +130,14 @@ jobs:
           DB_PASSWORD_B64=$(echo -n "${{ secrets.DB_PASSWORD }}" | base64 -w 0)
           SECRET_KEY_BASE_B64=$(echo -n "${{ secrets.SECRET_KEY_BASE }}" | base64 -w 0)
           QUOTE_WEBHOOK_TOKEN_B64=$(echo -n "${{ secrets.QUOTE_WEBHOOK_TOKEN }}" | base64 -w 0)
+          NEW_RELIC_LICENSE_KEY_B64=$(echo -n "${{ secrets.NEW_RELIC_LICENSE_KEY }}" | base64 -w 0)
 
           # Substitui os placeholders dos manifests com os valores reais
           sed -i "s|DATABASE_HOST_PLACEHOLDER|$RDS_HOST|g" k8s/configmap.yaml
           sed -i "s|DATABASE_PASSWORD_PLACEHOLDER|$DB_PASSWORD_B64|g" k8s/secrets.yaml
           sed -i "s|SECRET_KEY_BASE_PLACEHOLDER|$SECRET_KEY_BASE_B64|g" k8s/secrets.yaml
           sed -i "s|QUOTE_WEBHOOK_TOKEN_PLACEHOLDER|$QUOTE_WEBHOOK_TOKEN_B64|g" k8s/secrets.yaml
+          sed -i "s|NEW_RELIC_LICENSE_KEY_PLACEHOLDER|$NEW_RELIC_LICENSE_KEY_B64|g" k8s/secrets.yaml
           sed -i "s|IMAGE_PLACEHOLDER|$IMAGE_URI|g" k8s/web-deployment.yaml
           sed -i "s|IMAGE_PLACEHOLDER|$IMAGE_URI|g" k8s/jobs-deployment.yaml
           sed -i "s|IMAGE_PLACEHOLDER|$IMAGE_URI|g" k8s/db-prepare-job.yaml

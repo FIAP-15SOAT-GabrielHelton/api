@@ -70,3 +70,9 @@ spec:
                   name: oficina-mecanica-secrets
                   key: SENDGRID_API_KEY
                   optional: true
+            - name: NEW_RELIC_LICENSE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: oficina-mecanica-secrets
+                  key: NEW_RELIC_LICENSE_KEY
+                  optional: true
