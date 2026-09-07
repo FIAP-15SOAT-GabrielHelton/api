@@ -42,6 +42,13 @@ gem "ostruct"
 gem "rswag-api"
 gem "rswag-ui"
 
+# APM (latência, throughput, erros, distributed tracing) — ver config/newrelic.yml
+gem "newrelic_rpm"
+
+# Estrutura os logs de requisição como uma linha JSON por request (latência, status,
+# controller/action, request_id) — ver config/initializers/lograge.rb
+gem "lograge"
+
 group :development do
   gem "letter_opener_web"
 end

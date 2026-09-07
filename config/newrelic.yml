@@ -1,0 +1,41 @@
+#
+# Configuração do agente New Relic (APM). Nenhum valor sensível aqui —
+# a license key vem de ENV (setada via secret do Kubernetes, nunca commitada).
+#
+common: &default_settings
+  license_key: <%= ENV["NEW_RELIC_LICENSE_KEY"] %>
+  agent_enabled: <%= !ENV["NEW_RELIC_LICENSE_KEY"].to_s.empty? %>
+  app_name: Oficina Mecanica API (<%= ENV.fetch("RAILS_ENV", "development") %>)
+  log_level: info
+
+  distributed_tracing:
+    enabled: true
+
+  error_collector:
+    enabled: true
+    capture_events: true
+
+  transaction_tracer:
+    enabled: true
+
+  # Encaminha os logs da aplicação para o New Relic (correlacionados por trace.id/span.id
+  # na UI). O log estruturado em JSON no stdout (kubectl logs) é feito separadamente
+  # via lograge — ver config/initializers/lograge.rb.
+  application_logging:
+    enabled: true
+    forwarding:
+      enabled: true
+    local_decorating:
+      enabled: false
+
+development:
+  <<: *default_settings
+  agent_enabled: false
+
+test:
+  <<: *default_settings
+  agent_enabled: false
+  monitor_mode: false
+
+production:
+  <<: *default_settings

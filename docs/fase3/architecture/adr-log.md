@@ -23,7 +23,17 @@ A numeração continua a sequência dos ADRs 1-7 já registrados na [RFC-001](..
   - Escala horizontal (mais réplicas do mesmo pod) é mais barata e simples de reverter no ambiente do AWS Academy do que escala vertical (trocar o tipo de instância do node group, que exigiria recriar o `node_group` do [`k8s-infra`](https://github.com/FIAP-15SOAT-GabrielHelton/k8s-infra)).
   - O teto de 3 réplicas é deliberadamente baixo — reflete o ambiente de demonstração/estudo (créditos limitados do AWS Academy), não uma capacidade de produção real.
   - Depende do `metrics-server` (ver [diagrama de componentes](component-diagram.md)) para funcionar — sem ele, o HPA não tem métricas de CPU/memória para decidir quando escalar.
-* **Consequências:** Sem um APM/observabilidade de aplicação (ver estado do monitoramento no [diagrama de componentes](component-diagram.md)), o HPA decide escala **só por CPU/memória do processo**, não por métricas de negócio (ex: latência de resposta, fila de requisições) — uma limitação a considerar quando o New Relic for adotado.
+* **Consequências:** O HPA decide escala **só por CPU/memória do processo**, não por métricas de negócio (ex: latência de resposta, fila de requisições). Com a adoção do New Relic (ADR 11), essas métricas de negócio passam a existir e ficam disponíveis no dashboard — mas o HPA continua escalando só por infraestrutura, por decisão deliberada de manter o escopo simples (ver ADR 11).
+
+## ADR 11: New Relic como Ferramenta de Observabilidade e Monitoramento
+
+* **Decisão:** Adotar o **New Relic** (em vez de Datadog ou outra alternativa equivalente) como ferramenta única de observabilidade do sistema, cobrindo quatro frentes: APM na API Rails (`newrelic_rpm`, repositório `api`), extensão Lambda nas duas funções serverless (repositório `auth-serverless`), integração de infraestrutura Kubernetes (`nri-kubernetes`, repositório `k8s-infra`) e dashboard/policy de alertas provisionados como código (Terraform, provider `newrelic`, repositório `k8s-infra`).
+* **Justificativa:**
+  - Ambas as ferramentas (New Relic e Datadog) atendem igualmente bem aos requisitos do tech challenge (APM, logs estruturados, métricas de Kubernetes, dashboards, alertas) — a escolha entre elas é indiferente para o domínio do projeto; New Relic foi escolhido pelo free tier sem cartão de crédito, compatível com o caráter acadêmico do projeto.
+  - Um único fornecedor para APM (aplicação), infraestrutura (cluster) e dashboards evita a fragmentação de sinais entre ferramentas diferentes — uma requisição é rastreável do API Gateway até o banco de dados usando o mesmo `trace.id`/`request_id` em todos os pontos.
+  - O provider Terraform oficial (`newrelic/newrelic`) permite versionar dashboard e alertas como código, no mesmo padrão do resto do projeto (Terraform para toda a infraestrutura) — diferente de outros recursos AWS, a conta New Relic não é destruída ao final da sessão do AWS Academy, então esse estado é persistente entre execuções.
+  - A extensão Lambda do New Relic (camada pré-compilada, sem alterar o código das funções) foi preferida a instrumentação manual via SDK, mantendo o código das Lambdas focado na lógica de autenticação/autorização.
+* **Consequências:** A conta New Relic (license key, account id, API key) é um segredo independente da AWS Academy — não expira com a sessão, mas precisa ser gerenciada nos 3 repositórios que a consomem (`api`, `auth-serverless`, `k8s-infra`) como GitHub Secrets permanentes, diferente do padrão de credenciais AWS efêmeras via `workflow_dispatch` usado no resto do projeto.
 
 ## ADR 10: Clean Architecture / DDD em Camadas Explícitas
 

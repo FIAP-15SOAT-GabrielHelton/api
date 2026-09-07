@@ -235,7 +235,8 @@ module Api
       def notifier
         @notifier ||= Shared::WorkOrderNotifier.new(
           notifiers: [
-            Shared::WorkOrderEmailNotifier.new(customer_repository: customer_repository)
+            Shared::WorkOrderEmailNotifier.new(customer_repository: customer_repository),
+            Shared::WorkOrderMetricsNotifier.new
           ]
         )
       end
@@ -245,7 +246,7 @@ module Api
       end
 
       def finish_line_item_service
-        WorkOrders::FinishLineItemService.new(work_order_repository: work_order_repository)
+        WorkOrders::FinishLineItemService.new(work_order_repository: work_order_repository, notifier: notifier)
       end
 
       def create_params
