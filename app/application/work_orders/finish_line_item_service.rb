@@ -2,11 +2,13 @@
 
 require_relative "../shared/result"
 require_relative "../shared/use_case"
+require_relative "../shared/work_order_notifier"
 
 module WorkOrders
   class FinishLineItemService < Shared::UseCase
-    def initialize(work_order_repository:)
+    def initialize(work_order_repository:, notifier: Shared::NullNotifier.new)
       @repository = work_order_repository
+      @notifier = notifier
     end
 
     private
@@ -24,9 +26,12 @@ module WorkOrders
       return Shared::Result.failure("Only service items can be finished") unless line_item.service?
 
       line_item.finish!
-      work_order.complete if work_order.all_services_ready?
+      auto_completed = work_order.all_services_ready?
+      work_order.complete if auto_completed
 
-      Shared::Result.success(@repository.save(work_order))
+      saved = @repository.save(work_order)
+      @notifier.notify_status_changed(saved) if auto_completed
+      Shared::Result.success(saved)
     end
   end
 end

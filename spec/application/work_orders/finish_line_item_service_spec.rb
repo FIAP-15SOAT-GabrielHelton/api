@@ -47,7 +47,25 @@ RSpec.describe WorkOrders::FinishLineItemService do
     expect(wo.total_execution_time_minutes).not_to be_nil
   end
 
+  it "notifies (New Relic: evento de duracao 'execucao') when auto-completing" do
+    notifier = double("Notifier")
+    allow(notifier).to receive(:notify_status_changed)
+    service = build_service(id: 10)
+    wo = WorkOrders::WorkOrder.new(
+      id: 1, customer_id: 10, vehicle_id: 20, problem_description: "x",
+      status: :in_progress, line_items: [ service ]
+    )
+    allow(repository).to receive(:find).with(1).and_return(wo)
+    use_case_with_notifier = described_class.new(work_order_repository: repository, notifier: notifier)
+
+    use_case_with_notifier.call(work_order_id: 1, line_item_id: 10)
+
+    expect(notifier).to have_received(:notify_status_changed).with(wo)
+  end
+
   it "keeps the work order in_progress when other services remain pending" do
+    notifier = double("Notifier")
+    allow(notifier).to receive(:notify_status_changed)
     service_a = build_service(id: 10)
     service_b = build_service(id: 11, started_at: nil)
     wo = WorkOrders::WorkOrder.new(
@@ -55,11 +73,13 @@ RSpec.describe WorkOrders::FinishLineItemService do
       status: :in_progress, line_items: [ service_a, service_b ]
     )
     allow(repository).to receive(:find).with(1).and_return(wo)
+    use_case_with_notifier = described_class.new(work_order_repository: repository, notifier: notifier)
 
-    use_case.call(work_order_id: 1, line_item_id: 10)
+    use_case_with_notifier.call(work_order_id: 1, line_item_id: 10)
 
     expect(wo.in_progress?).to be true
     expect(wo.completed?).to be false
+    expect(notifier).not_to have_received(:notify_status_changed)
   end
 
   it "returns failure when work order not found" do

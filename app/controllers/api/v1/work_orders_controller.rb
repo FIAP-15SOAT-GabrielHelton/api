@@ -246,7 +246,7 @@ module Api
       end
 
       def finish_line_item_service
-        WorkOrders::FinishLineItemService.new(work_order_repository: work_order_repository)
+        WorkOrders::FinishLineItemService.new(work_order_repository: work_order_repository, notifier: notifier)
       end
 
       def create_params

@@ -8,6 +8,8 @@ module Shared
     def notify_status_changed(work_order)
       record_status_changed(work_order)
       record_stage_duration(work_order)
+    rescue StandardError => e
+      Rails.logger.error("[WorkOrderMetricsNotifier] Failed to record New Relic event: #{e.message}")
     end
 
     private
