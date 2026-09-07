@@ -219,6 +219,24 @@ bin/test_hpa.sh stop      # remove o gerador de carga manualmente
 
 O script sobe um `Deployment` auxiliar (`busybox`) batendo em `/up`, mostra `kubectl get hpa`/`top pods` em loop e remove tudo automaticamente ao encerrar com `Ctrl+C`.
 
+### Gerando tráfego de demonstração (New Relic)
+
+```bash
+bin/generate_demo_traffic.sh <URL_DO_API_GATEWAY> [CICLOS]
+```
+
+**Por que existe:** os dashboards do New Relic (volume diário de OS, tempo médio por etapa, falhas de processamento) só mostram algo relevante depois que o sistema processa tráfego real. Sem esse script, seria preciso operar a aplicação manualmente por vários ciclos completos (autenticação → diagnóstico → orçamento → execução → entrega) só para gerar dados suficientes para o vídeo de demonstração.
+
+**O que faz:** roda `CICLOS` ciclos completos (padrão: 4) do fluxo de negócio de ponta a ponta contra a URL informada — login de staff, autenticação de cliente por CPF, criação de OS, diagnóstico, orçamento, aprovação, execução, entrega e consulta de tracking público — alternando entre os dois clientes do seed padrão. A cada ciclo também dispara **uma falha proposital diferente** (OS inexistente, senha errada, CPF inválido, RBAC negado, transição de estado inválida), de forma determinística e rotativa, para popular o widget de "falhas/erros de integração" do dashboard sem exigir teste manual de cada cenário de erro. Ao final, faz algumas chamadas ao healthcheck público (`/up`).
+
+**Como rodar:** requer `curl` e `jq`, e assume os dados do seed padrão (`db/seeds.rb`: usuários `admin`/`mechanic` e os clientes de exemplo, cada um com pelo menos um veículo). Deve ser apontado para a URL pública do **API Gateway** (não para o Service do Kubernetes diretamente), já que os cenários de autenticação de cliente por CPF passam pela Lambda do [`auth-serverless`](https://github.com/FIAP-15SOAT-GabrielHelton/auth-serverless):
+
+```bash
+bin/generate_demo_traffic.sh https://<api-id>.execute-api.us-east-1.amazonaws.com 5
+```
+
+Os dados levam de 1 a 3 minutos para aparecer no New Relic (APM/eventos de negócio) e cerca de 1 minuto para as métricas de Kubernetes (`nri-kubernetes`). Este script é independente do CI/CD — não é chamado por nenhum workflow, é uma ferramenta manual de preparação para a gravação do vídeo demonstrativo.
+
 ## Provisionamento da infraestrutura (Terraform)
 
 Este repositório só provisiona o **ECR** — pré-requisito: os repositórios [`k8s-infra`](https://github.com/FIAP-15SOAT-GabrielHelton/k8s-infra) e [`db-infra`](https://github.com/FIAP-15SOAT-GabrielHelton/db-infra) precisam ter sido implantados antes (publicam `eks_cluster_name`/`rds_address` no SSM, lidos em tempo de deploy).
@@ -297,9 +315,10 @@ Detalhes da estrutura de `spec/` e comandos por camada: [`docs/fase1/README.md`]
 | [`docs/fase3/RFC-001`](docs/fase3/RFC-001-authentication-authorization-serverless.md) | Autenticação via CPF, RBAC, arquitetura serverless e separação em 5 repositórios (ADRs 1-7) |
 | [`docs/fase3/RFC-002`](docs/fase3/RFC-002-escolha-da-nuvem.md) | Escolha do provedor de nuvem (AWS/AWS Academy) e suas implicações arquiteturais |
 | [`docs/fase3/RFC-003`](docs/fase3/RFC-003-escolha-do-banco-e-modelo.md) | Escolha do banco de dados (PostgreSQL), diagrama ER completo e explicação dos relacionamentos |
+| [`docs/fase3/RFC-004`](docs/fase3/RFC-004-escolha-da-observabilidade.md) | Escolha da ferramenta de observabilidade (New Relic vs. Datadog vs. Prometheus/Grafana vs. CloudWatch) |
 | [`docs/fase3/architecture/component-diagram.md`](docs/fase3/architecture/component-diagram.md) | Diagrama de componentes completo: nuvem, APIs, banco e monitoramento (atravessa os 5 repositórios) |
 | [`docs/fase3/architecture/sequence-diagrams.md`](docs/fase3/architecture/sequence-diagrams.md) | Diagramas de sequência: autenticação por CPF, rota protegida (RBAC) e abertura de Ordem de Serviço |
-| [`docs/fase3/architecture/adr-log.md`](docs/fase3/architecture/adr-log.md) | ADRs 8-11: padrão de comunicação (REST síncrono), uso de HPA, Clean Architecture/DDD, escolha do New Relic |
+| [`docs/fase3/architecture/adr-log.md`](docs/fase3/architecture/adr-log.md) | ADRs 8-12: padrão de comunicação (REST síncrono), uso de HPA, Clean Architecture/DDD, escolha do New Relic, organização de logs/traces |
 
 ## Repositórios do projeto (Fase 3)
 
