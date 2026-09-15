@@ -270,6 +270,7 @@ No pipeline de CI/CD, esses passos são automáticos — incluindo a limpeza de 
 - Walkthrough completo via `curl` cobrindo o ciclo de vida de uma OS: [`docs/fase1/demo.md`](docs/fase1/demo.md)
 - Walkthrough via `curl` dos endpoints da Fase 2 (webhooks, rejeição direta, listagem priorizada): [`docs/fase2/demo.md`](docs/fase2/demo.md)
 - Autenticação de cliente por CPF e RBAC: exemplos de request/response na [RFC-001 §5](docs/fase3/RFC-001-authentication-authorization-serverless.md)
+- Roteiro cURL para o vídeo demonstrativo (auth por CPF + JWT, consumo de API protegida e RBAC): [`docs/fase3/demo-video-curl.md`](docs/fase3/demo-video-curl.md)
 
 ## Vídeo demonstrativo
 
